@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Cashier 收银系统</title>
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 720px;
+         margin: 60px auto; padding: 0 20px; color: #222; }
+  h1 { font-size: 24px; }
+  .card { border: 1px solid #eee; border-radius: 10px;
+          padding: 20px; margin-top: 16px; }
+  input { width: 100%; padding: 10px; margin: 6px 0;
+          border: 1px solid #ccc; border-radius: 6px; font-size: 15px; }
+  button { padding: 10px 20px; border: none; border-radius: 6px;
+           background: #2563eb; color: #fff; font-size: 15px; cursor: pointer; }
+  button:hover { background: #1d4ed8; }
+  .ok { color: #16a34a; } .err { color: #dc2626; }
+</style>
+</head>
+<body>
+  <h1>🧾 Cashier 收银系统</h1>
+  <p>状态: <span id="status">检查中…</span></p>
+
+  <div class="card">
+    <h3>登录</h3>
+    <input id="u" placeholder="用户名（默认 admin）" autocomplete="username" />
+    <input id="p" type="password" placeholder="密码" autocomplete="current-password" />
+    <button onclick="login()">登录</button>
+    <p id="msg"></p>
+  </div>
+
+<script>
+async function checkHealth() {
+  try {
+    const r = await fetch('/health/ready');
+    const j = await r.json();
+    const el = document.getElementById('status');
+    el.textContent = j.status + ' · License: ' + j.license;
+    el.className = j.status === 'ready' ? 'ok' : 'err';
+  } catch (e) {
+    document.getElementById('status').textContent = '服务未就绪';
+  }
+}
+async function login() {
+  const u = document.getElementById('u').value;
+  const p = document.getElementById('p').value;
+  const msg = document.getElementById('msg');
+  try {
+    const r = await fetch('/api/v1/auth/login', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({username: u, password: p})
+    });
+    const j = await r.json();
+    if (r.ok) {
+      localStorage.setItem('token', j.token);
+      msg.textContent = '✅ 登录成功';
+      msg.className = 'ok';
+    } else {
+      msg.textContent = '❌ ' + (j.detail || '登录失败');
+      msg.className = 'err';
+    }
+  } catch (e) {
+    msg.textContent = '❌ ' + e.message;
+    msg.className = 'err';
+  }
+}
+checkHealth();
+</script>
+</body>
+</html>

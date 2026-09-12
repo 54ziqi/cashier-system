@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.eggs/
+*.egg
+
+# 虚拟环境
+.venv/
+venv/
+env/
+
+# 运行数据（含密钥与数据库，严禁入库）
+data/
+*.db
+*.db-wal
+*.db-shm
+secrets/
+*.pem
+*.key
+*.lic
+initial-password.txt
+
+# 日志
+logs/
+*.log
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# 系统
+.DS_Store
+Thumbs.db
+
+# 测试/缓存
+.pytest_cache/
+.coverage
+htmlcov/

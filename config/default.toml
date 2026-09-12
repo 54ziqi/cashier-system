@@ -1,0 +1,32 @@
+[server]
+host = "0.0.0.0"
+port = 8000
+auto_port = true
+open_browser = true
+
+[db]
+filename = "cashier.db"
+wal = true
+cache_size_kb = -8000
+busy_timeout_ms = 30000
+
+[security]
+bcrypt_rounds = 10
+session_hours = 8
+max_login_failures = 5
+lock_minutes = 15
+
+[license]
+grace_days = 7
+allow_trial = true
+
+[logging]
+level = "INFO"
+max_bytes = 5000000
+backup_count = 3
+
+[features]
+agents = true
+hardware = false
+websocket = false
+cloud_sync = false

@@ -1,0 +1,13 @@
+[server]
+port = 8000
+auto_port = true
+
+[db]
+cache_size_kb = -8000
+
+[logging]
+level = "WARNING"
+
+[features]
+agents = true
+hardware = false
