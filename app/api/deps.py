@@ -1,6 +1,8 @@
 """API 依赖注入"""
+
 from __future__ import annotations
-from fastapi import Request, HTTPException, Depends
+
+from fastapi import Depends, HTTPException, Request
 
 from app.infra.db.engine import session_factory
 

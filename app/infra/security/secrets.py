@@ -1,5 +1,7 @@
 """自动生成与加载密钥"""
+
 from __future__ import annotations
+
 import secrets
 from pathlib import Path
 

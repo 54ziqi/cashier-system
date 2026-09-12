@@ -1,9 +1,10 @@
 """商品推荐 Agent - 基于关联规则（共现矩阵）"""
+
 from __future__ import annotations
+
 import logging
 from collections import Counter, defaultdict
 from pathlib import Path
-from typing import Optional
 
 from app.agents.base import BaseAgent
 
@@ -16,7 +17,7 @@ class RecommendationAgent(BaseAgent):
     实现精简版 Apriori 算法
     """
 
-    def __init__(self, db_path: Optional[Path] = None, interval: float = 600):
+    def __init__(self, db_path: Path | None = None, interval: float = 600):
         super().__init__(interval=interval)
         self._co_occurrence: dict[frozenset[str], int] = Counter()
         self._product_counts: Counter = Counter()
@@ -30,21 +31,31 @@ class RecommendationAgent(BaseAgent):
         """从订单历史重新计算共现矩阵"""
         try:
             from app.infra.db.engine import session_factory
-            from app.infra.db.models import OrderItem as OrderItemModel, Order as OrderModel
+            from app.infra.db.models import (
+                Order as OrderModel,
+            )
+            from app.infra.db.models import (
+                OrderItem as OrderItemModel,
+            )
 
             with session_factory() as s:
                 # 只取最近的 paid 订单
                 order_ids = [
-                    row[0] for row in s.query(OrderModel.id).filter(
-                        OrderModel.status.in_(["paid", "completed"])
-                    ).order_by(OrderModel.created_at.desc()).limit(1000).all()
+                    row[0]
+                    for row in s.query(OrderModel.id)
+                    .filter(OrderModel.status.in_(["paid", "completed"]))
+                    .order_by(OrderModel.created_at.desc())
+                    .limit(1000)
+                    .all()
                 ]
                 if not order_ids:
                     return
 
-                items = s.query(OrderItemModel).filter(
-                    OrderItemModel.order_id.in_(order_ids)
-                ).all()
+                items = (
+                    s.query(OrderItemModel)
+                    .filter(OrderItemModel.order_id.in_(order_ids))
+                    .all()
+                )
 
             # 重建共现矩阵
             co_occurrence: dict[frozenset[str], int] = Counter()

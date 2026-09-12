@@ -1,12 +1,14 @@
 """Barcode 值对象 - 条码验证"""
+
 from __future__ import annotations
+
 import re
 
 
 class Barcode(str):
     """条码值对象"""
 
-    def __new__(cls, value: str) -> "Barcode":
+    def __new__(cls, value: str) -> Barcode:
         cleaned = cls._clean(value)
         if not cls._is_valid(cleaned):
             raise ValueError(f"无效条码: {value}")

@@ -1,7 +1,18 @@
 """数据库模型：订单/商品/会员/支付等完整表结构"""
+
 from __future__ import annotations
+
 from datetime import datetime, timezone
-from sqlalchemy import String, Integer, Float, Text, DateTime, ForeignKey, UniqueConstraint
+
+from sqlalchemy import (
+    DateTime,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.infra.db.engine import Base
@@ -18,16 +29,27 @@ class Tenant(Base):
     license_type: single | chain_parent | chain_node
     license_tier: single | chain_flagship | chain_unlimited (仅 chain_parent 填写)
     """
+
     __tablename__ = "tenants"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
     # ── 激活码锁定字段 (本地不可修改) ──
-    license_store_name: Mapped[str] = mapped_column(String(128), nullable=False, default="未授权门店")
-    license_type: Mapped[str] = mapped_column(String(16), nullable=False, default="single")  # single | chain_parent | chain_node
-    license_tier: Mapped[str] = mapped_column(String(16), default="single")                   # single | chain_flagship | chain_unlimited
-    parent_tenant_id: Mapped[str | None] = mapped_column(String(36), nullable=True, default=None)
-    max_stores: Mapped[int] = mapped_column(Integer, default=1)        # 母店配额
-    hardware_fingerprint: Mapped[str] = mapped_column(String(128), nullable=True, default=None)
+    license_store_name: Mapped[str] = mapped_column(
+        String(128), nullable=False, default="未授权门店"
+    )
+    license_type: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="single"
+    )  # single | chain_parent | chain_node
+    license_tier: Mapped[str] = mapped_column(
+        String(16), default="single"
+    )  # single | chain_flagship | chain_unlimited
+    parent_tenant_id: Mapped[str | None] = mapped_column(
+        String(36), nullable=True, default=None
+    )
+    max_stores: Mapped[int] = mapped_column(Integer, default=1)  # 母店配额
+    hardware_fingerprint: Mapped[str] = mapped_column(
+        String(128), nullable=True, default=None
+    )
 
     # ── 经营信息 (本地可改) ──
     contact_name: Mapped[str] = mapped_column(String(64), nullable=True, default=None)
@@ -45,6 +67,7 @@ class Merchant(Base):
     兼容旧表名：POS 端代码中 Merchant 引用全部平滑迁移到 Tenant。
     本模型保留用于兼容已有 admin API 接口，实际 CRUD 落到 tenants 表。
     """
+
     __tablename__ = "merchants"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
@@ -60,7 +83,8 @@ class Merchant(Base):
 
 
 class RevokedToken(Base):
-    """已撤销 Token 的持久化存储，跨重启保持撤销状态"""
+    """已撤销 Token 的持久化存储 (deprecated: 保留用于迁移兼容, 不再写入)"""
+
     __tablename__ = "revoked_tokens"
 
     jti: Mapped[str] = mapped_column(String(64), primary_key=True)
@@ -79,6 +103,7 @@ class LocalCredential(Base):
     failed_attempts: Mapped[int] = mapped_column(Integer, default=0)
     locked_until: Mapped[float] = mapped_column(Float, default=0.0)
     last_login: Mapped[float] = mapped_column(Float, default=0.0)
+    token_version: Mapped[int] = mapped_column(Integer, default=0)
 
 
 class Product(Base):
@@ -110,7 +135,9 @@ class Category(Base):
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
     merchant_id: Mapped[str] = mapped_column(String(36), nullable=False)
     name: Mapped[str] = mapped_column(String(64), nullable=False)
-    parent_id: Mapped[str | None] = mapped_column(String(36), nullable=True, default=None)
+    parent_id: Mapped[str | None] = mapped_column(
+        String(36), nullable=True, default=None
+    )
     sort_order: Mapped[int] = mapped_column(Integer, default=0)
 
 
@@ -127,20 +154,22 @@ class Member(Base):
     level: Mapped[str] = mapped_column(String(16), default="normal")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=now)
 
-    __table_args__ = (
-        UniqueConstraint("merchant_id", "phone", name="uq_member_phone"),
-    )
+    __table_args__ = (UniqueConstraint("merchant_id", "phone", name="uq_member_phone"),)
 
 
 class Order(Base):
     __tablename__ = "orders"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
-    order_no: Mapped[str] = mapped_column(String(32), unique=True, nullable=False, index=True)
+    order_no: Mapped[str] = mapped_column(
+        String(32), unique=True, nullable=False, index=True
+    )
     merchant_id: Mapped[str] = mapped_column(String(36), nullable=False)
     cashier_id: Mapped[str] = mapped_column(String(36))
     member_id: Mapped[str] = mapped_column(String(36))
-    idempotency_key: Mapped[str] = mapped_column(String(64), unique=True, nullable=True, default=None)
+    idempotency_key: Mapped[str] = mapped_column(
+        String(64), unique=True, nullable=True, default=None
+    )
     status: Mapped[str] = mapped_column(String(16), nullable=False, default="pending")
     total_amount: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     discount_amount: Mapped[int] = mapped_column(Integer, default=0)
@@ -152,10 +181,10 @@ class Order(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=now)
     version: Mapped[int] = mapped_column(Integer, default=0)
 
-    items: Mapped[list["OrderItem"]] = relationship(
+    items: Mapped[list[OrderItem]] = relationship(
         back_populates="order", cascade="all, delete-orphan", lazy="selectin"
     )
-    payments: Mapped[list["Payment"]] = relationship(
+    payments: Mapped[list[Payment]] = relationship(
         back_populates="order", cascade="all, delete-orphan", lazy="selectin"
     )
 
@@ -169,7 +198,9 @@ class OrderItem(Base):
     __tablename__ = "order_items"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
-    order_id: Mapped[str] = mapped_column(String(36), ForeignKey("orders.id", ondelete="CASCADE"), nullable=False)
+    order_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("orders.id", ondelete="CASCADE"), nullable=False
+    )
     product_id: Mapped[str] = mapped_column(String(36))
     product_name: Mapped[str] = mapped_column(String(128), nullable=False)
     barcode: Mapped[str] = mapped_column(String(64))
@@ -179,14 +210,16 @@ class OrderItem(Base):
     subtotal: Mapped[int] = mapped_column(Integer, nullable=False)
     discount: Mapped[int] = mapped_column(Integer, default=0)
 
-    order: Mapped["Order"] = relationship(back_populates="items")
+    order: Mapped[Order] = relationship(back_populates="items")
 
 
 class Payment(Base):
     __tablename__ = "payments"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
-    order_id: Mapped[str] = mapped_column(String(36), ForeignKey("orders.id"), nullable=False)
+    order_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("orders.id"), nullable=False
+    )
     method: Mapped[str] = mapped_column(String(16), nullable=False)
     amount: Mapped[int] = mapped_column(Integer, nullable=False)
     status: Mapped[str] = mapped_column(String(16), nullable=False)
@@ -194,7 +227,7 @@ class Payment(Base):
     paid_at: Mapped[datetime] = mapped_column(DateTime)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=now)
 
-    order: Mapped["Order"] = relationship(back_populates="payments")
+    order: Mapped[Order] = relationship(back_populates="payments")
 
 
 class Device(Base):

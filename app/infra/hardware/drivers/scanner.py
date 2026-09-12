@@ -1,9 +1,8 @@
 import logging
 import threading
 import time
-from pathlib import Path
 
-from app.infra.hardware.base import ScannerCallback, BaseDevice, DeviceInfo
+from app.infra.hardware.base import BaseDevice, DeviceInfo
 
 log = logging.getLogger(__name__)
 
@@ -22,10 +21,9 @@ class SerialScannerDriver(BaseDevice):
     def connect(self) -> bool:
         try:
             import serial
+
             self._ser = serial.Serial(
-                port=self._port,
-                baudrate=self._baudrate,
-                timeout=0.1
+                port=self._port, baudrate=self._baudrate, timeout=0.1
             )
             self._running = True
             self._thread = threading.Thread(target=self._read_loop, daemon=True)
@@ -84,6 +82,7 @@ class HIDScannerDriver(BaseDevice):
     def connect(self) -> bool:
         try:
             import evdev
+
             if self._device_path:
                 self._device = evdev.InputDevice(self._device_path)
             else:

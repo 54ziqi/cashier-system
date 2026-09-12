@@ -1,6 +1,6 @@
 """分类 API 测试：CRUD + 商品分类关联"""
+
 from __future__ import annotations
-import pytest
 
 
 class TestCategoriesAPI:
@@ -126,8 +126,12 @@ class TestProductSearchAPI:
         client.post(
             "/api/v1/merchant/products",
             headers=auth_headers,
-            json={"name": "分类测试商品", "price": 100, "stock": 10,
-                    "category_id": cat_id},
+            json={
+                "name": "分类测试商品",
+                "price": 100,
+                "stock": 10,
+                "category_id": cat_id,
+            },
         )
 
         # 按分类筛选
@@ -173,7 +177,11 @@ class TestRoleBasedAccess:
         resp = client.post(
             "/api/v1/merchant/members",
             headers=auth_headers,
-            json={"name": "RBAC测试会员", "phone": "13900001234", "card_no": "C_RBAC_01"},
+            json={
+                "name": "RBAC测试会员",
+                "phone": "13900001234",
+                "card_no": "C_RBAC_01",
+            },
         )
         if resp.status_code == 200:
             member_id = resp.json()["id"]

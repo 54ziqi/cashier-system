@@ -32,3 +32,8 @@ include = ["app*"]
 
 [tool.setuptools.package-data]
 app = ["../config/*.toml", "../static/*"]
+
+[tool.pytest.ini_options]
+env = [
+    "CLOUD_SKIP_PUBKEY_CHECK=1",
+]

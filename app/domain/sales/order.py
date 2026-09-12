@@ -1,11 +1,10 @@
 """领域层：订单聚合根 + 状态机"""
+
 from __future__ import annotations
+
 import uuid
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Optional
-
-from app.domain.shared.money import Money
 
 
 class OrderStatus(str, Enum):
@@ -18,8 +17,17 @@ class OrderStatus(str, Enum):
 
 class OrderItemVO:
     """订单项值对象（新建订单时传入）"""
-    def __init__(self, product_id: str, product_name: str, barcode: str,
-                 unit_price: int, quantity: float = 1, weight: float = 0, discount: int = 0):
+
+    def __init__(
+        self,
+        product_id: str,
+        product_name: str,
+        barcode: str,
+        unit_price: int,
+        quantity: float = 1,
+        weight: float = 0,
+        discount: int = 0,
+    ):
         self.product_id = product_id
         self.product_name = product_name
         self.barcode = barcode
@@ -36,8 +44,14 @@ class OrderItemVO:
 class Order:
     """订单聚合根"""
 
-    def __init__(self, merchant_id: str, cashier_id: str = "", member_id: str = "",
-                 idempotency_key: str = "", items: list[OrderItemVO] = None):
+    def __init__(
+        self,
+        merchant_id: str,
+        cashier_id: str = "",
+        member_id: str = "",
+        idempotency_key: str = "",
+        items: list[OrderItemVO] = None,
+    ):
         self.id = str(uuid.uuid4())
         self.order_no = self._gen_order_no()
         self.merchant_id = merchant_id
@@ -76,7 +90,9 @@ class Order:
         if self.status != OrderStatus.PENDING:
             raise ValueError(f"Cannot pay in {self.status} status")
         if paid_amount < self.final_amount:
-            raise ValueError(f"Insufficient payment: {paid_amount} < {self.final_amount}")
+            raise ValueError(
+                f"Insufficient payment: {paid_amount} < {self.final_amount}"
+            )
         self.paid_amount = paid_amount
         self.change_amount = max(paid_amount - self.final_amount, 0)
         self.status = OrderStatus.PAID
@@ -116,13 +132,16 @@ class Order:
             "final_amount": self.final_amount,
             "paid_amount": self.paid_amount,
             "change_amount": self.change_amount,
-            "items": [{
-                "product_id": i.product_id,
-                "product_name": i.product_name,
-                "unit_price": i.unit_price,
-                "quantity": i.quantity,
-                "weight": i.weight,
-                "subtotal": i.subtotal,
-            } for i in self.items],
+            "items": [
+                {
+                    "product_id": i.product_id,
+                    "product_name": i.product_name,
+                    "unit_price": i.unit_price,
+                    "quantity": i.quantity,
+                    "weight": i.weight,
+                    "subtotal": i.subtotal,
+                }
+                for i in self.items
+            ],
             "created_at": self.created_at.isoformat(),
         }

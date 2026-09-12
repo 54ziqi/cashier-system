@@ -1,9 +1,12 @@
 """硬件抽象基类"""
+
 from __future__ import annotations
+
 from abc import ABC, abstractmethod
-from typing import Any, Callable, Optional
+from collections.abc import Callable
 from dataclasses import dataclass
 from enum import Enum
+from typing import Any
 
 
 class DeviceType(str, Enum):

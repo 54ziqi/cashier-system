@@ -1,5 +1,7 @@
 """Agent 基类 - 低优先级后台线程"""
+
 from __future__ import annotations
+
 import logging
 import threading
 import time
@@ -28,7 +30,9 @@ class BaseAgent(ABC):
         if self._running:
             return
         self._running = True
-        self._thread = threading.Thread(target=self._run_loop, daemon=True, name=f"agent-{self.name}")
+        self._thread = threading.Thread(
+            target=self._run_loop, daemon=True, name=f"agent-{self.name}"
+        )
         # 设置为最低优先级 (Windows不可用，忽略)
         try:
             self._thread.priority = threading.Thread.MIN_PRIORITY
@@ -54,8 +58,7 @@ class BaseAgent(ABC):
 
     @property
     @abstractmethod
-    def name(self) -> str:
-        ...
+    def name(self) -> str: ...
 
     @abstractmethod
     def tick(self) -> None:

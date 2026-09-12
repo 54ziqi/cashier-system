@@ -8,6 +8,7 @@ Dashboard 看板 API 测试
 - /dashboard/chain/stores 的 RBAC：single 版 403、chain_parent 版 200（本地 stub）
 - License 升级回归：trial payload 新增字段（store_name / tier / max_stores / price_tier / module_flags.cloud_sync / module_flags.chain_view）
 """
+
 from __future__ import annotations
 
 import pytest
@@ -40,11 +41,13 @@ class TestDashboardAPI:
 
     def test_tenant_info(self, client, auth_headers):
         """tenant 接口返回店名与 license_type"""
-        resp = client.get("/api/v1/dashboard/tenant", headers=self._h(client, auth_headers))
+        resp = client.get(
+            "/api/v1/dashboard/tenant", headers=self._h(client, auth_headers)
+        )
         assert resp.status_code == 200
         data = resp.json()
         assert "store_name" in data
-        assert data["license_type"] == "single"   # trial 默认 single
+        assert data["license_type"] == "single"  # trial 默认 single
         assert "features" in data
         assert data["features"]["dashboard"] is True
         # single 版无 chain_view 也无 cloud_sync
@@ -52,11 +55,19 @@ class TestDashboardAPI:
         assert data["features"]["cloud_sync"] is False
 
     def test_overview_structure(self, client, auth_headers):
-        resp = client.get("/api/v1/dashboard/overview", headers=self._h(client, auth_headers))
+        resp = client.get(
+            "/api/v1/dashboard/overview", headers=self._h(client, auth_headers)
+        )
         assert resp.status_code == 200
         data = resp.json()
-        for k in ("today_revenue", "today_count", "avg_ticket",
-                  "yesterday_revenue", "yoy_percent", "daily_7"):
+        for k in (
+            "today_revenue",
+            "today_count",
+            "avg_ticket",
+            "yesterday_revenue",
+            "yoy_percent",
+            "daily_7",
+        ):
             assert k in data, f"missing {k}"
         assert isinstance(data["daily_7"], list)
         assert len(data["daily_7"]) == 7
@@ -107,8 +118,13 @@ class TestDashboardAPI:
         )
         assert resp.status_code == 200
         data = resp.json()
-        for k in ("total_members", "member_revenue", "non_member_revenue",
-                  "member_ratio", "top10"):
+        for k in (
+            "total_members",
+            "member_revenue",
+            "non_member_revenue",
+            "member_ratio",
+            "top10",
+        ):
             assert k in data
 
 

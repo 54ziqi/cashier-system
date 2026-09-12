@@ -6,8 +6,9 @@
 - chain_view 授权用户 (/chain/*) 额外可见门店对比、跨店分析
 - single 类型用户不能访问 chain_view 路由
 """
+
 from __future__ import annotations
-from collections import defaultdict
+
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -15,12 +16,13 @@ from sqlalchemy import func
 
 from app.api.deps import get_current_user
 from app.infra.db.engine import session_factory
-from app.infra.db.models import Order, OrderItem, Member, Product, Payment
+from app.infra.db.models import Member, Order, OrderItem
 
 router = APIRouter(prefix="/api/v1/dashboard", tags=["dashboard"])
 
 
 # ── helpers ──────────────────────────────────────────────────────────
+
 
 def _tenant(request: Request) -> dict:
     """从 app.state.tenant 取当前租户信息"""
@@ -51,10 +53,13 @@ def _range_to_days(range_str: str) -> int:
 
 # ── 1. 今日总览 (所有登录用户可见) ──────────────────────────────────
 
+
 @router.get("/overview")
 async def overview(request: Request, user=Depends(get_current_user)):
     _tenant(request)  # ensure activated
-    today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    today = datetime.now(timezone.utc).replace(
+        hour=0, minute=0, second=0, microsecond=0
+    )
 
     with session_factory() as s:
         # 今日订单聚合
@@ -124,6 +129,7 @@ async def overview(request: Request, user=Depends(get_current_user)):
 
 # ── 2. 品类分析 ─────────────────────────────────────────────────────
 
+
 @router.get("/category")
 async def category(request: Request, days: int = 30, user=Depends(get_current_user)):
     _tenant(request)
@@ -156,6 +162,7 @@ async def category(request: Request, days: int = 30, user=Depends(get_current_us
 
 # ── 3. 时段热力 (24h × 7d) ──────────────────────────────────────────
 
+
 @router.get("/hourly")
 async def hourly(request: Request, days: int = 7, user=Depends(get_current_user)):
     _tenant(request)
@@ -178,11 +185,14 @@ async def hourly(request: Request, days: int = 7, user=Depends(get_current_user)
     by_hour = {int(r.hour): {"revenue": r.rev, "count": r.cnt} for r in rows}
     return {
         "range_days": days,
-        "hourly": [{"hour": h, **by_hour.get(h, {"revenue": 0, "count": 0})} for h in range(24)],
+        "hourly": [
+            {"hour": h, **by_hour.get(h, {"revenue": 0, "count": 0})} for h in range(24)
+        ],
     }
 
 
 # ── 4. 趋势对比 (7 / 30 / 90 天) ────────────────────────────────────
+
 
 @router.get("/trend")
 async def trend(request: Request, range: str = "7d", user=Depends(get_current_user)):
@@ -213,6 +223,7 @@ async def trend(request: Request, range: str = "7d", user=Depends(get_current_us
 
 # ── 5. 会员分析 ─────────────────────────────────────────────────────
 
+
 @router.get("/member")
 async def member_stats(request: Request, user=Depends(get_current_user)):
     _tenant(request)
@@ -225,7 +236,9 @@ async def member_stats(request: Request, user=Depends(get_current_user)):
                 func.count(Order.id).label("order_count"),
                 func.coalesce(func.sum(Order.final_amount), 0).label("rev"),
             )
-            .filter(Order.member_id.isnot(None), Order.status.in_(["paid", "completed"]))
+            .filter(
+                Order.member_id.isnot(None), Order.status.in_(["paid", "completed"])
+            )
             .first()
         )
         non_member_rev = (
@@ -267,8 +280,11 @@ async def member_stats(request: Request, user=Depends(get_current_user)):
 
 # ── 6. 收银员效率 ───────────────────────────────────────────────────
 
+
 @router.get("/cashier")
-async def cashier_stats(request: Request, days: int = 30, user=Depends(get_current_user)):
+async def cashier_stats(
+    request: Request, days: int = 30, user=Depends(get_current_user)
+):
     _tenant(request)
     since = datetime.now(timezone.utc) - timedelta(days=days)
 
@@ -296,6 +312,7 @@ async def cashier_stats(request: Request, days: int = 30, user=Depends(get_curre
 
 # ── 7. 门店对比 (仅 chain_view 授权, 即 chain_parent) ────────────────
 
+
 @router.get("/chain/stores")
 async def chain_stores(request: Request, user=Depends(get_current_user)):
     """母店视角：拉取所有子店名称与数据（子店需先 push 到云，此处为本地 stub，云版本通过云端汇总）"""
@@ -316,6 +333,7 @@ async def chain_stores(request: Request, user=Depends(get_current_user)):
 
 
 # ── 租户信息 (前端初始化用) ─────────────────────────────────────────
+
 
 @router.get("/tenant")
 async def tenant_info(request: Request, user=Depends(get_current_user)):

@@ -1,6 +1,8 @@
 """商家端：收银/结算 API"""
+
 from __future__ import annotations
-from fastapi import APIRouter, Request, HTTPException, Depends
+
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 
 from app.api.deps import get_current_user, require_admin
@@ -32,7 +34,7 @@ class SuspendRequest(BaseModel):
 async def checkout(request: Request, data: CheckoutRequest):
     user = await get_current_user(request)
 
-    from app.application.checkout.checkout_service import CheckoutService, CheckoutError
+    from app.application.checkout.checkout_service import CheckoutError, CheckoutService
 
     checkout_svc = CheckoutService(sid="local")
 
@@ -76,6 +78,7 @@ async def list_members(
 ):
     user = await get_current_user(request)
     from app.application.member.member_service import MemberService
+
     svc = MemberService(merchant_id="local")
     if phone:
         member = svc.find_by_phone(phone)
@@ -87,6 +90,7 @@ async def list_members(
 async def get_member(request: Request, member_id: str):
     user = await get_current_user(request)
     from app.application.member.member_service import MemberService
+
     svc = MemberService(merchant_id="local")
     member = svc.get_member(member_id)
     if not member:
@@ -98,6 +102,7 @@ async def get_member(request: Request, member_id: str):
 async def create_member(request: Request, data: dict):
     user = await get_current_user(request)
     from app.application.member.member_service import MemberService
+
     svc = MemberService(merchant_id="local")
     try:
         return svc.create_member(data)
@@ -106,8 +111,11 @@ async def create_member(request: Request, data: dict):
 
 
 @router.post("/members/{member_id}/recharge")
-async def recharge_member(request: Request, member_id: str, amount: float = 0, user=Depends(require_admin)):
+async def recharge_member(
+    request: Request, member_id: str, amount: float = 0, user=Depends(require_admin)
+):
     from app.application.member.member_service import MemberService
+
     svc = MemberService(merchant_id="local")
     try:
         return svc.recharge(member_id, amount)

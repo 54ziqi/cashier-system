@@ -28,11 +28,8 @@ class CustomerDisplayDriver(BaseDevice):
     def _connect_serial(self) -> bool:
         try:
             import serial
-            self._ser = serial.Serial(
-                port=self._port,
-                baudrate=9600,
-                timeout=0.5
-            )
+
+            self._ser = serial.Serial(port=self._port, baudrate=9600, timeout=0.5)
             self._connected = True
             log.info(f"串口客显已连接: {self._port}")
             return True
@@ -57,40 +54,48 @@ class CustomerDisplayDriver(BaseDevice):
         """显示当前扫描商品"""
         if self._display_mode == "serial" and self._ser:
             self._send_serial(f"{name[:8]} {price:.2f}x{qty}")
-        self._notify({
-            "action": "display_item",
-            "name": name,
-            "price": price,
-            "qty": qty,
-        })
+        self._notify(
+            {
+                "action": "display_item",
+                "name": name,
+                "price": price,
+                "qty": qty,
+            }
+        )
 
     def display_total(self, total: float, item_count: int) -> None:
         """显示合计"""
         if self._display_mode == "serial" and self._ser:
             self._send_serial(f"TOTAL {total:.2f}")
-        self._notify({
-            "action": "display_total",
-            "total": total,
-            "item_count": item_count,
-        })
+        self._notify(
+            {
+                "action": "display_total",
+                "total": total,
+                "item_count": item_count,
+            }
+        )
 
     def show_qrcode(self, qr_data: dict) -> None:
         """显示收款码信息"""
-        self._notify({
-            "action": "show_qrcode",
-            "qr_url": qr_data.get("qr_url", ""),
-            "amount": qr_data.get("amount", 0),
-            "expire_at": qr_data.get("expire_at", 0),
-        })
+        self._notify(
+            {
+                "action": "show_qrcode",
+                "qr_url": qr_data.get("qr_url", ""),
+                "amount": qr_data.get("amount", 0),
+                "expire_at": qr_data.get("expire_at", 0),
+            }
+        )
 
     def show_payment_success(self, duration: int = 3) -> None:
         """显示支付成功"""
         if self._display_mode == "serial" and self._ser:
             self._send_serial("PAID SUCCESS!")
-        self._notify({
-            "action": "payment_success",
-            "duration": duration,
-        })
+        self._notify(
+            {
+                "action": "payment_success",
+                "duration": duration,
+            }
+        )
 
     def clear(self) -> None:
         """清屏"""

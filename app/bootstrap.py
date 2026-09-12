@@ -1,14 +1,15 @@
 """首次运行自动初始化"""
+
 from __future__ import annotations
+
+import logging
 import secrets
 import string
-import logging
-from pathlib import Path
 
 from app.config import Settings
 from app.infra.security.secrets import (
-    load_or_create_secret,
     load_or_create_rsa_keypair,
+    load_or_create_secret,
 )
 
 log = logging.getLogger(__name__)
@@ -40,8 +41,7 @@ def ensure_admin(settings: Settings, auth_engine) -> str | None:
 
     pwd_file = settings.home / "data" / "initial-password.txt"
     pwd_file.write_text(
-        f"用户名: admin\n密码: {pwd}\n"
-        f"（首次成功登录后本文件会被自动删除）\n",
+        f"用户名: admin\n密码: {pwd}\n（首次成功登录后本文件会被自动删除）\n",
         encoding="utf-8",
     )
     try:

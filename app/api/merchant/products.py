@@ -1,6 +1,8 @@
 """商家端：商品 API"""
+
 from __future__ import annotations
-from fastapi import APIRouter, Request, HTTPException, Query
+
+from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel
 
 from app.api.deps import get_current_user
@@ -42,8 +44,9 @@ async def list_products(
 ):
     user = await get_current_user(request)
     svc = _get_product_service(request)
-    return svc.list_products(page=page, page_size=page_size, status=status,
-                              category_id=category_id, q=q)
+    return svc.list_products(
+        page=page, page_size=page_size, status=status, category_id=category_id, q=q
+    )
 
 
 @router.get("/search")
@@ -55,7 +58,9 @@ async def search_products(
     user = await get_current_user(request)
     svc = _get_product_service(request)
     if category_id:
-        return svc.list_products(page=1, page_size=200, category_id=category_id, q=q)["items"]
+        return svc.list_products(page=1, page_size=200, category_id=category_id, q=q)[
+            "items"
+        ]
     return svc.search(q)
 
 
@@ -90,7 +95,9 @@ async def create_product(request: Request, data: ProductCreate):
 async def update_product(request: Request, product_id: str, data: ProductUpdate):
     user = await get_current_user(request)
     svc = _get_product_service(request)
-    result = svc.update_product(product_id, {k: v for k, v in data.model_dump().items() if v is not None})
+    result = svc.update_product(
+        product_id, {k: v for k, v in data.model_dump().items() if v is not None}
+    )
     if not result:
         raise HTTPException(404, "商品不存在")
     return result
@@ -106,4 +113,5 @@ async def delete_product(request: Request, product_id: str):
 
 def _get_product_service(request: Request):
     from app.application.product.product_service import ProductService
+
     return ProductService(merchant_id="local")

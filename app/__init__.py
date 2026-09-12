@@ -1,20 +1,22 @@
 """FastAPI 应用工厂"""
+
 from __future__ import annotations
+
 import logging
 import traceback
 from pathlib import Path
 
 from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
-from fastapi.middleware.cors import CORSMiddleware
 
+from app.api import auth, health
+from app.api.admin import licenses, tenants
+from app.api.dashboard import router as dashboard_router
+from app.api.merchant import cashier, categories, orders, products
 from app.config import Settings, load_settings
 from app.lifespan import lifespan
-from app.api import health, auth
-from app.api.merchant import products, orders, cashier, categories
-from app.api.admin import tenants, licenses
-from app.api.dashboard import router as dashboard_router
 
 log = logging.getLogger(__name__)
 
@@ -43,7 +45,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     # 全局异常处理器：避免泄露内部堆栈
     @app.exception_handler(Exception)
     async def _global_exception_handler(request: Request, exc: Exception):
-        log.error(f"未捕获异常: {request.method} {request.url.path}\n{traceback.format_exc()}")
+        log.error(
+            f"未捕获异常: {request.method} {request.url.path}\n{traceback.format_exc()}"
+        )
         return JSONResponse(
             status_code=500,
             content={"detail": "系统内部错误", "code": "internal_error"},
@@ -56,7 +60,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     # Merchant APIs
     app.include_router(products.router)
     app.include_router(orders.router)
-    app.include_router(cashier.router)  # includes /api/v1/merchant/members and /checkout
+    app.include_router(
+        cashier.router
+    )  # includes /api/v1/merchant/members and /checkout
     app.include_router(categories.router)
 
     # Admin APIs
@@ -86,6 +92,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
 def setup_logging(settings: Settings) -> None:
     from logging.handlers import RotatingFileHandler
+
     settings.ensure_dirs()
     log_file = settings.logs_dir / "app.log"
     handler = RotatingFileHandler(
@@ -94,9 +101,9 @@ def setup_logging(settings: Settings) -> None:
         backupCount=settings.logging.backup_count,
         encoding="utf-8",
     )
-    handler.setFormatter(logging.Formatter(
-        "%(asctime)s %(levelname)s %(name)s: %(message)s"
-    ))
+    handler.setFormatter(
+        logging.Formatter("%(asctime)s %(levelname)s %(name)s: %(message)s")
+    )
     root = logging.getLogger()
     root.setLevel(settings.logging.level)
     root.addHandler(handler)

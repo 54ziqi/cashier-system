@@ -1,11 +1,12 @@
 """应用层：商品服务"""
+
 from __future__ import annotations
+
 import logging
 import uuid
-from typing import Optional
 
-from app.infra.db.models import Product as ProductModel
 from app.infra.db.engine import session_factory
+from app.infra.db.models import Product as ProductModel
 
 log = logging.getLogger(__name__)
 
@@ -19,8 +20,14 @@ class ProductService:
     def __init__(self, merchant_id: str = "local"):
         self.merchant_id = merchant_id
 
-    def list_products(self, page: int = 1, page_size: int = 50, status: str = "",
-                      category_id: str = "", q: str = "") -> dict:
+    def list_products(
+        self,
+        page: int = 1,
+        page_size: int = 50,
+        status: str = "",
+        category_id: str = "",
+        q: str = "",
+    ) -> dict:
         with session_factory() as s:
             query = s.query(ProductModel).filter_by(merchant_id=self.merchant_id)
             if status:
@@ -29,11 +36,16 @@ class ProductService:
                 query = query.filter_by(category_id=category_id)
             if q:
                 escaped = _escape_like(q)
-                query = query.filter(ProductModel.name.like(f"%{escaped}%", escape="\\"))
+                query = query.filter(
+                    ProductModel.name.like(f"%{escaped}%", escape="\\")
+                )
             total = query.count()
-            items = query.order_by(ProductModel.created_at.desc()).offset(
-                (page - 1) * page_size
-            ).limit(page_size).all()
+            items = (
+                query.order_by(ProductModel.created_at.desc())
+                .offset((page - 1) * page_size)
+                .limit(page_size)
+                .all()
+            )
             return {
                 "total": total,
                 "page": page,
@@ -41,27 +53,38 @@ class ProductService:
                 "items": [self._to_dict(p) for p in items],
             }
 
-    def get_product(self, product_id: str) -> Optional[dict]:
+    def get_product(self, product_id: str) -> dict | None:
         with session_factory() as s:
-            p = s.query(ProductModel).filter_by(
-                id=product_id, merchant_id=self.merchant_id
-            ).first()
+            p = (
+                s.query(ProductModel)
+                .filter_by(id=product_id, merchant_id=self.merchant_id)
+                .first()
+            )
             return self._to_dict(p) if p else None
 
-    def get_by_barcode(self, barcode: str) -> Optional[dict]:
+    def get_by_barcode(self, barcode: str) -> dict | None:
         with session_factory() as s:
-            p = s.query(ProductModel).filter_by(
-                merchant_id=self.merchant_id, barcode=barcode, status="active"
-            ).first()
+            p = (
+                s.query(ProductModel)
+                .filter_by(
+                    merchant_id=self.merchant_id, barcode=barcode, status="active"
+                )
+                .first()
+            )
             return self._to_dict(p) if p else None
 
     def search(self, q: str, limit: int = 20) -> list[dict]:
         with session_factory() as s:
-            items = s.query(ProductModel).filter(
-                ProductModel.merchant_id == self.merchant_id,
-                ProductModel.status == "active",
-                ProductModel.name.like(f"%{_escape_like(q)}%", escape="\\")
-            ).limit(limit).all()
+            items = (
+                s.query(ProductModel)
+                .filter(
+                    ProductModel.merchant_id == self.merchant_id,
+                    ProductModel.status == "active",
+                    ProductModel.name.like(f"%{_escape_like(q)}%", escape="\\"),
+                )
+                .limit(limit)
+                .all()
+            )
             return [self._to_dict(p) for p in items]
 
     def create_product(self, data: dict) -> dict:
@@ -84,15 +107,26 @@ class ProductService:
             log.info(f"Product created: {product.name} ({product.id})")
             return self._to_dict(product)
 
-    def update_product(self, product_id: str, data: dict) -> Optional[dict]:
+    def update_product(self, product_id: str, data: dict) -> dict | None:
         with session_factory() as s:
-            p = s.query(ProductModel).filter_by(
-                id=product_id, merchant_id=self.merchant_id
-            ).first()
+            p = (
+                s.query(ProductModel)
+                .filter_by(id=product_id, merchant_id=self.merchant_id)
+                .first()
+            )
             if not p:
                 return None
-            for field in ["name", "price", "barcode", "category_id", "cost_price",
-                          "stock", "unit", "icon", "status"]:
+            for field in [
+                "name",
+                "price",
+                "barcode",
+                "category_id",
+                "cost_price",
+                "stock",
+                "unit",
+                "icon",
+                "status",
+            ]:
                 if field in data:
                     setattr(p, field, data[field])
             if "is_weighing" in data:
@@ -102,9 +136,11 @@ class ProductService:
 
     def delete_product(self, product_id: str) -> None:
         with session_factory() as s:
-            p = s.query(ProductModel).filter_by(
-                id=product_id, merchant_id=self.merchant_id
-            ).first()
+            p = (
+                s.query(ProductModel)
+                .filter_by(id=product_id, merchant_id=self.merchant_id)
+                .first()
+            )
             if p:
                 p.status = "inactive"
                 s.commit()
@@ -149,12 +185,14 @@ class ProductService:
             ("纸巾", 300, "🧻", "包", False),
         ]
         with session_factory() as s:
-            existing = s.query(ProductModel).filter_by(merchant_id=self.merchant_id).count()
+            existing = (
+                s.query(ProductModel).filter_by(merchant_id=self.merchant_id).count()
+            )
             if existing > 0:
                 return 0
             for i, (name, price, icon, unit, weighing) in enumerate(demo):
                 p = ProductModel(
-                    id=f"demo_p{i+1:03d}",
+                    id=f"demo_p{i + 1:03d}",
                     merchant_id=self.merchant_id,
                     name=name,
                     price=price,

@@ -1,5 +1,7 @@
 """异常检测 Agent - 基于滑动窗口和3σ统计基线"""
+
 from __future__ import annotations
+
 import logging
 import statistics
 from collections import deque
@@ -36,9 +38,13 @@ class AnomalyDetectionAgent(BaseAgent):
             from app.infra.db.models import Order as OrderModel
 
             with session_factory() as s:
-                orders = s.query(OrderModel).filter(
-                    OrderModel.status.in_(["paid", "completed", "refunded"])
-                ).order_by(OrderModel.created_at.desc()).limit(500).all()
+                orders = (
+                    s.query(OrderModel)
+                    .filter(OrderModel.status.in_(["paid", "completed", "refunded"]))
+                    .order_by(OrderModel.created_at.desc())
+                    .limit(500)
+                    .all()
+                )
 
                 if not orders:
                     return
@@ -59,7 +65,11 @@ class AnomalyDetectionAgent(BaseAgent):
 
                 if len(discount_rates) >= 10:
                     mean = statistics.mean(discount_rates)
-                    stdev = statistics.stdev(discount_rates) if len(discount_rates) > 1 else 0
+                    stdev = (
+                        statistics.stdev(discount_rates)
+                        if len(discount_rates) > 1
+                        else 0
+                    )
                     self._thresholds["discount_rate"] = (mean, stdev)
 
                 # 退款率

@@ -1,18 +1,20 @@
 """FastAPI 启动/关闭钩子"""
+
 from __future__ import annotations
+
 import logging
 import time
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from app.config import Settings
 from app.bootstrap import ensure_admin
-from app.infra.db.engine import init_engine, session_factory, get_engine
+from app.config import Settings
+from app.infra.db.engine import get_engine, init_engine, session_factory
 from app.infra.db.migrations import run_migrations
 from app.kernel.auth.engine import OfflineAuthEngine
-from app.kernel.license.verifier import LicenseVerifier
 from app.kernel.license.trial import generate_trial_license
+from app.kernel.license.verifier import LicenseVerifier
 
 log = logging.getLogger(__name__)
 
@@ -34,7 +36,7 @@ async def lifespan(app: FastAPI):
     if pwd:
         print("\n" + "=" * 56)
         print("  首次启动：已创建管理员账户")
-        print(f"  用户名: admin")
+        print("  用户名: admin")
         print(f"  密  码: {pwd}")
         print(f"  已保存: {settings.home / 'data' / 'initial-password.txt'}")
         print("=" * 56 + "\n")
@@ -47,10 +49,10 @@ async def lifespan(app: FastAPI):
         generate_trial_license(priv_pem, settings.license_path, days=30)
         log.info("已生成 30 天试用 License")
 
-
     # Seed demo data
-    from app.application.product.product_service import ProductService
     from app.application.member.member_service import MemberService
+    from app.application.product.product_service import ProductService
+
     n_products = ProductService(merchant_id="local").seed_demo_products()
     n_members = MemberService(merchant_id="local").seed_demo_members()
     if n_products:
@@ -86,7 +88,8 @@ async def lifespan(app: FastAPI):
             if not existing.phone:
                 existing.phone = p.get("phone", "")
             if existing.license_expire_at is None and p.get("expire_at"):
-                from datetime import datetime, timezone as _tz
+                from datetime import datetime
+
                 try:
                     existing.license_expire_at = datetime.fromisoformat(
                         p["expire_at"].replace("Z", "+00:00")
@@ -105,7 +108,9 @@ async def lifespan(app: FastAPI):
                 "max_stores": existing.max_stores,
                 "flags": mf,
             }
-            log.info(f"租户同步完成: {existing.license_store_name} ({existing.license_type})")
+            log.info(
+                f"租户同步完成: {existing.license_store_name} ({existing.license_type})"
+            )
 
     print(f"✅ Cashier 已启动  |  License: {result.status}")
     if n_products:
@@ -129,5 +134,5 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         log.warning(f"关闭数据库时出错: {e}")
 
-    elapsed = time.time() - getattr(app.state, 'started_at', time.time())
+    elapsed = time.time() - getattr(app.state, "started_at", time.time())
     log.info(f"Cashier 已关闭 (运行 {elapsed:.1f}s)")

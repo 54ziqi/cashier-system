@@ -1,10 +1,11 @@
 """首次启动生成 30 天试用 License / 连锁母店试用"""
+
 from __future__ import annotations
+
 import base64
 import hashlib
 import json
 import os
-import uuid
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -16,8 +17,8 @@ from .fingerprint import get_fingerprint
 
 # ── 定价（单位：人民币 元/年） ──
 PRICING = {
-    "single":          {"amount": 399,  "max_stores": 1},
-    "chain_flagship":  {"amount": 1599, "max_stores": 5},
+    "single": {"amount": 399, "max_stores": 1},
+    "chain_flagship": {"amount": 1599, "max_stores": 5},
     "chain_unlimited": {"amount": 3999, "max_stores": 999999},
 }
 
@@ -35,7 +36,14 @@ def generate_trial_license(priv_pem: bytes, out_path: Path, days: int = 30) -> N
         "store_name": "试用门店",
         "parent_merchant_id": "",
         "max_stores": PRICING["single"]["max_stores"],
-        "module_flags": {"member": True, "report": True, "online_pay": False, "dashboard": True, "cloud_sync": False, "chain_view": False},
+        "module_flags": {
+            "member": True,
+            "report": True,
+            "online_pay": False,
+            "dashboard": True,
+            "cloud_sync": False,
+            "chain_view": False,
+        },
         "max_devices": 1,
         "max_cashiers": 3,
         "issued_at": now.isoformat(),
@@ -53,8 +61,9 @@ def generate_trial_license(priv_pem: bytes, out_path: Path, days: int = 30) -> N
     priv = serialization.load_pem_private_key(priv_pem, password=None)
     signature = priv.sign(
         payload_enc,
-        padding.PSS(mgf=padding.MGF1(hashes.SHA256()),
-                    salt_length=padding.PSS.MAX_LENGTH),
+        padding.PSS(
+            mgf=padding.MGF1(hashes.SHA256()), salt_length=padding.PSS.MAX_LENGTH
+        ),
         hashes.SHA256(),
     )
 

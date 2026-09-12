@@ -1,11 +1,21 @@
 """应用层：支付服务"""
+
 from __future__ import annotations
+
 import logging
 import uuid
 from datetime import datetime, timezone
 
-from app.infra.db.models import Order as OrderModel, Payment as PaymentModel, Member as MemberModel
 from app.infra.db.engine import session_factory
+from app.infra.db.models import (
+    Member as MemberModel,
+)
+from app.infra.db.models import (
+    Order as OrderModel,
+)
+from app.infra.db.models import (
+    Payment as PaymentModel,
+)
 
 log = logging.getLogger(__name__)
 
@@ -34,7 +44,9 @@ class PaymentService:
             if order.status != "pending":
                 raise PaymentError(f"Cannot pay order in {order.status} status")
             if amount < order.final_amount:
-                raise PaymentError(f"Insufficient payment: {amount} < {order.final_amount}")
+                raise PaymentError(
+                    f"Insufficient payment: {amount} < {order.final_amount}"
+                )
 
             change = amount - order.final_amount
 
@@ -58,7 +70,9 @@ class PaymentService:
             order.status = "completed"
 
             s.commit()
-            log.info(f"Cash payment: order={order.order_no}, amount={amount}, change={change}")
+            log.info(
+                f"Cash payment: order={order.order_no}, amount={amount}, change={change}"
+            )
 
             return {
                 "order_id": order_id,
@@ -83,7 +97,9 @@ class PaymentService:
             if not member:
                 raise PaymentError("Member not found")
             if member.balance < order.final_amount:
-                raise PaymentError(f"Insufficient balance: {member.balance} < {order.final_amount}")
+                raise PaymentError(
+                    f"Insufficient balance: {member.balance} < {order.final_amount}"
+                )
 
             # Deduct balance
             member.balance -= order.final_amount
@@ -109,7 +125,9 @@ class PaymentService:
             order.change_amount = 0
 
             s.commit()
-            log.info(f"Balance payment: order={order.order_no}, member={member.name}, amount={order.final_amount}")
+            log.info(
+                f"Balance payment: order={order.order_no}, member={member.name}, amount={order.final_amount}"
+            )
 
             return {
                 "order_id": order_id,
@@ -124,10 +142,13 @@ class PaymentService:
     def get_payments(self, order_id: str) -> list[dict]:
         with session_factory() as s:
             payments = s.query(PaymentModel).filter_by(order_id=order_id).all()
-            return [{
-                "id": p.id,
-                "method": p.method,
-                "amount": p.amount,
-                "status": p.status,
-                "paid_at": p.paid_at.isoformat() if p.paid_at else "",
-            } for p in payments]
+            return [
+                {
+                    "id": p.id,
+                    "method": p.method,
+                    "amount": p.amount,
+                    "status": p.status,
+                    "paid_at": p.paid_at.isoformat() if p.paid_at else "",
+                }
+                for p in payments
+            ]

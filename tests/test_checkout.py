@@ -1,10 +1,12 @@
 """结账模块测试：创建订单 / 支付 / 库存原子性 / 退款 / 余额"""
+
 from __future__ import annotations
+
 import pytest
 
+from app.application.checkout.checkout_service import CheckoutError, CheckoutService
 from app.infra.db.engine import session_factory
-from app.infra.db.models import Product, Order, Member, Payment
-from app.application.checkout.checkout_service import CheckoutService, CheckoutError
+from app.infra.db.models import Member, Order, Product
 
 
 class TestCheckoutService:
@@ -13,7 +15,6 @@ class TestCheckoutService:
     @pytest.fixture(autouse=True)
     def init(self, app):
         """确保 app fixture 先运行（初始化 DB）"""
-        pass
 
     @pytest.fixture(autouse=True)
     def svc(self):
@@ -46,7 +47,9 @@ class TestCheckoutService:
         prod = self._product("demo_p004")  # 鲜牛奶 price=600
         r = svc.checkout(
             items=[{"product_id": prod["id"], "quantity": 1}],
-            pay_method="cash", cashier_id="admin", cash_amount=1000,
+            pay_method="cash",
+            cashier_id="admin",
+            cash_amount=1000,
         )
         assert r["payment"]["status"] == "completed"
         assert r["payment"]["change"] == 400  # 1000-600
@@ -57,7 +60,9 @@ class TestCheckoutService:
         stock_before = prod["stock"]
         svc.checkout(
             items=[{"product_id": prod["id"], "quantity": 2}],
-            pay_method="cash", cashier_id="admin", cash_amount=99999,
+            pay_method="cash",
+            cashier_id="admin",
+            cash_amount=99999,
         )
         stock_after = self._product(prod["id"])["stock"]
         assert stock_after == stock_before - 2
@@ -68,7 +73,9 @@ class TestCheckoutService:
         with pytest.raises(CheckoutError):
             svc.checkout(
                 items=[{"product_id": prod["id"], "quantity": 1}],
-                pay_method="cash", cashier_id="admin", cash_amount=100,
+                pay_method="cash",
+                cashier_id="admin",
+                cash_amount=100,
             )
 
     # ── 余额结算 ──────────────────────────────────
@@ -81,7 +88,9 @@ class TestCheckoutService:
         member = self._member("demo_m10002")
         r = svc.checkout(
             items=[{"product_id": prod["id"], "quantity": 1}],
-            pay_method="member_balance", cashier_id="admin", member_id=member["id"],
+            pay_method="member_balance",
+            cashier_id="admin",
+            member_id=member["id"],
         )
         assert r["payment"]["status"] == "completed"
         assert r["payment"]["points_earned"] == 2  # 200分/100 = 2积分
@@ -95,12 +104,15 @@ class TestCheckoutService:
         with pytest.raises(CheckoutError, match="余额不足"):
             svc.checkout(
                 items=[{"product_id": prod["id"], "quantity": 1}],
-                pay_method="member_balance", cashier_id="admin", member_id=member["id"],
+                pay_method="member_balance",
+                cashier_id="admin",
+                member_id=member["id"],
             )
 
     def test_balance_atomic_under_concurrent(self, svc):
         """并发余额扣减同一笔钱不应超扣（原子性）"""
         import threading
+
         prod = self._product("demo_p016")  # 纸巾 price=300
         member = self._member("demo_m10001")
         # 设为恰好只够买 1 件
@@ -112,7 +124,9 @@ class TestCheckoutService:
             try:
                 result = svc.checkout(
                     items=[{"product_id": prod["id"], "quantity": 1}],
-                    pay_method="member_balance", cashier_id="admin", member_id=member["id"],
+                    pay_method="member_balance",
+                    cashier_id="admin",
+                    member_id=member["id"],
                 )
                 results.append(result)
             except CheckoutError as e:
@@ -146,7 +160,9 @@ class TestCheckoutService:
         with pytest.raises(CheckoutError, match="库存不足"):
             svc.checkout(
                 items=[{"product_id": prod["id"], "quantity": 1}],
-                pay_method="cash", cashier_id="admin", cash_amount=999999,
+                pay_method="cash",
+                cashier_id="admin",
+                cash_amount=999999,
             )
         # 库存未被修改
         stock_after = self._product(prod["id"])["stock"]
@@ -155,6 +171,7 @@ class TestCheckoutService:
     def test_stock_concurrent_no_oversell(self, svc):
         """并发库存扣减不超卖"""
         import threading
+
         prod = self._product("demo_p004")
         self._set_stock(prod["id"], 3)  # 恰好 3
 
@@ -165,7 +182,9 @@ class TestCheckoutService:
             try:
                 result = svc.checkout(
                     items=[{"product_id": prod["id"], "quantity": 1}],
-                    pay_method="cash", cashier_id="admin", cash_amount=99999,
+                    pay_method="cash",
+                    cashier_id="admin",
+                    cash_amount=99999,
                 )
                 results.append(result)
             except CheckoutError as e:
@@ -190,7 +209,9 @@ class TestCheckoutService:
         stock_before = prod["stock"]
         r = svc.checkout(
             items=[{"product_id": prod["id"], "quantity": 2}],
-            pay_method="cash", cashier_id="admin", cash_amount=99999,
+            pay_method="cash",
+            cashier_id="admin",
+            cash_amount=99999,
         )
         order_id = r["order"].id
         svc.refund_order(order_id)
@@ -207,7 +228,9 @@ class TestCheckoutService:
         balance_before = member["balance"]
         r = svc.checkout(
             items=[{"product_id": prod["id"], "quantity": 1}],
-            pay_method="member_balance", cashier_id="admin", member_id=member["id"],
+            pay_method="member_balance",
+            cashier_id="admin",
+            member_id=member["id"],
         )
         order_id = r["order"].id
         svc.refund_order(order_id)
@@ -244,7 +267,9 @@ class TestCheckoutService:
         prod = self._product("demo_p011")  # 酸奶 price=400
         r = svc.checkout(
             items=[{"product_id": prod["id"], "quantity": 1}],
-            pay_method="cash", cashier_id="admin", cash_amount=9999,
+            pay_method="cash",
+            cashier_id="admin",
+            cash_amount=9999,
         )
         oid = r["order"].id
         detail = svc.get_order(oid)
@@ -267,7 +292,9 @@ class TestCheckoutService:
                 {"product_id": "demo_p002", "quantity": 1},  # 350
                 {"product_id": "demo_p003", "quantity": 2},  # 1600
             ],
-            pay_method="cash", cashier_id="admin", cash_amount=99999,
+            pay_method="cash",
+            cashier_id="admin",
+            cash_amount=99999,
         )
         assert r["payment"]["status"] == "completed"
         # total = 350 + 1600 = 1950; change = 99999-1950 = 98049
@@ -278,5 +305,7 @@ class TestCheckoutService:
         with pytest.raises(CheckoutError):
             svc.checkout(
                 items=[{"product_id": "no-such-product", "quantity": 1}],
-                pay_method="cash", cashier_id="admin", cash_amount=99999,
+                pay_method="cash",
+                cashier_id="admin",
+                cash_amount=99999,
             )

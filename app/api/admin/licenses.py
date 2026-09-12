@@ -1,6 +1,8 @@
 """管理员端：授权管理 API"""
+
 from __future__ import annotations
-from fastapi import APIRouter, Request, HTTPException, Depends
+
+from fastapi import APIRouter, Depends, HTTPException, Request
 
 from app.api.deps import get_current_user
 

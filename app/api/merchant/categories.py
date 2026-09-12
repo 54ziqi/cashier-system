@@ -1,6 +1,8 @@
 """商家端：商品分类 API"""
+
 from __future__ import annotations
-from fastapi import APIRouter, Request, HTTPException
+
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 
 from app.api.deps import get_current_user
@@ -48,7 +50,9 @@ async def create_category(request: Request, data: CategoryCreate):
 async def update_category(request: Request, cat_id: str, data: CategoryUpdate):
     user = await get_current_user(request)
     svc = _svc(request)
-    result = svc.update_category(cat_id, {k: v for k, v in data.model_dump().items() if v is not None})
+    result = svc.update_category(
+        cat_id, {k: v for k, v in data.model_dump().items() if v is not None}
+    )
     if not result:
         raise HTTPException(404, "分类不存在")
     return result
@@ -65,4 +69,5 @@ async def delete_category(request: Request, cat_id: str):
 
 def _svc(request: Request):
     from app.application.product.category_service import CategoryService
+
     return CategoryService(merchant_id="local")

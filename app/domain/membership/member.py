@@ -3,6 +3,7 @@
 
 class MemberLevel:
     """会员等级计算"""
+
     THRESHOLDS = {
         "diamond": 10000,
         "gold": 5000,
@@ -21,9 +22,17 @@ class MemberLevel:
 class Member:
     """会员聚合根"""
 
-    def __init__(self, id: str = "", merchant_id: str = "", card_no: str = "",
-                 name: str = "", phone: str = "", balance: int = 0,
-                 points: int = 0, level: str = "normal"):
+    def __init__(
+        self,
+        id: str = "",
+        merchant_id: str = "",
+        card_no: str = "",
+        name: str = "",
+        phone: str = "",
+        balance: int = 0,
+        points: int = 0,
+        level: str = "normal",
+    ):
         self.id = id
         self.merchant_id = merchant_id
         self.card_no = card_no

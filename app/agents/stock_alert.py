@@ -1,9 +1,10 @@
 """库存预警 Agent - 基于销售速度预测库存耗尽时间"""
+
 from __future__ import annotations
+
 import logging
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Optional
 
 from app.agents.base import BaseAgent
 
@@ -16,7 +17,7 @@ class StockAlertAgent(BaseAgent):
     每30分钟运行一次
     """
 
-    def __init__(self, db_path: Optional[Path] = None, interval: float = 1800):
+    def __init__(self, db_path: Path | None = None, interval: float = 1800):
         super().__init__(interval=interval)
         self._sales_velocity: dict[str, float] = {}  # product_id: units/day
 
@@ -28,25 +29,35 @@ class StockAlertAgent(BaseAgent):
         """重新计算销售速度"""
         try:
             from app.infra.db.engine import session_factory
-            from app.infra.db.models import OrderItem as OrderItemModel, Order as OrderModel
+            from app.infra.db.models import (
+                Order as OrderModel,
+            )
+            from app.infra.db.models import (
+                OrderItem as OrderItemModel,
+            )
 
             with session_factory() as s:
                 # 近7天已支付订单
                 since = datetime.now(timezone.utc) - timedelta(days=7)
                 order_ids = [
-                    row[0] for row in s.query(OrderModel.id).filter(
+                    row[0]
+                    for row in s.query(OrderModel.id)
+                    .filter(
                         OrderModel.status.in_(["paid", "completed"]),
-                        OrderModel.created_at >= since
-                    ).all()
+                        OrderModel.created_at >= since,
+                    )
+                    .all()
                 ]
 
                 if not order_ids:
                     self._sales_velocity = {}
                     return
 
-                items = s.query(OrderItemModel).filter(
-                    OrderItemModel.order_id.in_(order_ids)
-                ).all()
+                items = (
+                    s.query(OrderItemModel)
+                    .filter(OrderItemModel.order_id.in_(order_ids))
+                    .all()
+                )
 
             # 按商品聚合销量
             sales: dict[str, float] = {}
@@ -87,14 +98,20 @@ class StockAlertAgent(BaseAgent):
                 for p in products:
                     days = self.predict_depletion(p.id, p.stock)
                     if p.stock < 10 or (days < 3 and days != float("inf")):
-                        result.append({
-                            "product_id": p.id,
-                            "product_name": p.name,
-                            "stock": p.stock,
-                            "velocity_per_day": round(self._sales_velocity.get(p.id, 0), 2),
-                            "days_to_depletion": round(days, 1) if days != float("inf") else "∞",
-                            "level": "low" if p.stock < 10 else "warning",
-                        })
+                        result.append(
+                            {
+                                "product_id": p.id,
+                                "product_name": p.name,
+                                "stock": p.stock,
+                                "velocity_per_day": round(
+                                    self._sales_velocity.get(p.id, 0), 2
+                                ),
+                                "days_to_depletion": round(days, 1)
+                                if days != float("inf")
+                                else "∞",
+                                "level": "low" if p.stock < 10 else "warning",
+                            }
+                        )
 
             log.info(f"Low stock products: {len(result)}")
             return result

@@ -1,10 +1,11 @@
 """硬件设备注册表"""
+
 from __future__ import annotations
+
 import logging
-from typing import Any, Optional
 from threading import Lock
 
-from .base import BaseDevice, DeviceInfo, DeviceType
+from .base import BaseDevice, DeviceType
 
 log = logging.getLogger(__name__)
 
@@ -36,7 +37,7 @@ class DeviceRegistry:
             device.disconnect()
             log.info(f"设备已注销: {key}")
 
-    def get(self, device_type: DeviceType, device_id: str) -> Optional[BaseDevice]:
+    def get(self, device_type: DeviceType, device_id: str) -> BaseDevice | None:
         """获取设备"""
         key = f"{device_type.value}:{device_id}"
         return self._devices.get(key)
@@ -49,22 +50,22 @@ class DeviceRegistry:
         """获取所有设备"""
         return list(self._devices.values())
 
-    def get_scanner(self) -> Optional[BaseDevice]:
+    def get_scanner(self) -> BaseDevice | None:
         """获取第一个扫码枪设备"""
         devices = self.get_by_type(DeviceType.SCANNER)
         return devices[0] if devices else None
 
-    def get_printer(self) -> Optional[BaseDevice]:
+    def get_printer(self) -> BaseDevice | None:
         """获取第一个打印机设备"""
         devices = self.get_by_type(DeviceType.PRINTER)
         return devices[0] if devices else None
 
-    def get_scale(self) -> Optional[BaseDevice]:
+    def get_scale(self) -> BaseDevice | None:
         """获取第一个电子秤设备"""
         devices = self.get_by_type(DeviceType.SCALE)
         return devices[0] if devices else None
 
-    def get_display(self) -> Optional[BaseDevice]:
+    def get_display(self) -> BaseDevice | None:
         """获取第一个显示设备"""
         devices = self.get_by_type(DeviceType.DISPLAY)
         return devices[0] if devices else None

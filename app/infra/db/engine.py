@@ -1,4 +1,5 @@
 """SQLite + WAL + 单写队列"""
+
 from __future__ import annotations
 
 from sqlalchemy import create_engine, event
@@ -25,8 +26,10 @@ def init_engine(settings: Settings):
     _engine = create_engine(
         url,
         poolclass=NullPool,
-        connect_args={"check_same_thread": False,
-                      "timeout": settings.db.busy_timeout_ms / 1000},
+        connect_args={
+            "check_same_thread": False,
+            "timeout": settings.db.busy_timeout_ms / 1000,
+        },
         future=True,
     )
 

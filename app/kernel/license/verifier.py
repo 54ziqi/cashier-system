@@ -1,5 +1,7 @@
 """完全离线 License 验签（RSA-PSS + AES-GCM）"""
+
 from __future__ import annotations
+
 import json
 import time
 from dataclasses import dataclass
@@ -11,7 +13,6 @@ from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 from .fingerprint import get_fingerprint
-
 
 LicenseStatus = Literal["valid", "expired", "invalid", "missing", "grace"]
 
@@ -43,6 +44,7 @@ class LicenseVerifier:
             return LicenseResult("invalid", None, "License 格式错误")
 
         import base64
+
         try:
             payload_enc = base64.b64decode(payload_enc_b64)
             signature = base64.b64decode(signature_b64)
@@ -51,9 +53,12 @@ class LicenseVerifier:
 
         try:
             self.public_key.verify(
-                signature, payload_enc,
-                padding.PSS(mgf=padding.MGF1(hashes.SHA256()),
-                            salt_length=padding.PSS.MAX_LENGTH),
+                signature,
+                payload_enc,
+                padding.PSS(
+                    mgf=padding.MGF1(hashes.SHA256()),
+                    salt_length=padding.PSS.MAX_LENGTH,
+                ),
                 hashes.SHA256(),
             )
         except Exception:
@@ -87,9 +92,11 @@ class LicenseVerifier:
 
     def _derive_aes_key(self) -> bytes:
         import hashlib
+
         return hashlib.sha256(get_fingerprint().encode()).digest()
 
     @staticmethod
     def _parse_iso(iso: str) -> float:
         from datetime import datetime
+
         return datetime.fromisoformat(iso.replace("Z", "+00:00")).timestamp()

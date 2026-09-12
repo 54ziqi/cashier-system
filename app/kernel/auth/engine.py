@@ -1,17 +1,19 @@
-"""完全离线登录：本地凭证 + bcrypt + HMAC Session + Token 撤销（持久化）"""
+"""完全离线登录：本地凭证 + bcrypt + HMAC Session + Token 撤销（session version）"""
+
 from __future__ import annotations
-import hmac
+
 import hashlib
+import hmac
 import secrets
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Callable
 
 import bcrypt
-from sqlalchemy import select
+from sqlalchemy import select, text
 
-from app.infra.db.models import LocalCredential, RevokedToken
 from app.config import Settings
+from app.infra.db.models import LocalCredential
 
 
 class AuthError(Exception):
@@ -24,7 +26,8 @@ class SessionInfo:
     username: str
     role: str
     expires_at: float
-    jti: str = ""  # Token 唯一标识，用于撤销
+    jti: str = ""  # legacy 保留 (用于兼容旧字段)
+    ver: int = 0  # session version at token creation
 
 
 class OfflineAuthEngine:
@@ -32,6 +35,8 @@ class OfflineAuthEngine:
         self.session_factory = session_factory
         self.secret = secret
         self.cfg = cfg.security
+        # 短期内存辅助 (jti 黑名单缓存, 重启清空)
+        self._revoked_jtis: set[str] = set()
 
     def login(self, username: str, password: str) -> str:
         with self.session_factory() as s:
@@ -60,93 +65,129 @@ class OfflineAuthEngine:
             cred.last_login = now
             s.commit()
 
-            return self._sign_token(cred.id, cred.username, cred.role)
+            return self._sign_token(
+                cred.id, cred.username, cred.role, cred.token_version
+            )
 
-    def _sign_token(self, user_id: str, username: str, role: str) -> str:
+    def _sign_token(self, user_id: str, username: str, role: str, ver: int) -> str:
         ts = str(int(time.time()))
         jti = secrets.token_hex(16)
-        payload = f"{user_id}|{username}|{role}|{ts}|{jti}"
+        payload = f"{user_id}|{username}|{role}|{ts}|{jti}|{ver}"
         sig = hmac.new(self.secret, payload.encode(), hashlib.sha256).hexdigest()
         return f"{payload}|{sig}"
 
     def verify_token(self, token: str) -> SessionInfo:
         try:
             parts = token.split("|")
-            if len(parts) != 6:
+            if len(parts) != 7:
                 raise AuthError("Token 格式错误")
-            user_id, username, role, ts, jti, sig = parts
+            user_id, username, role, ts, jti, ver_str, sig = parts
         except (ValueError, IndexError):
             raise AuthError("Token 格式错误")
 
-        payload = f"{user_id}|{username}|{role}|{ts}|{jti}"
+        payload = f"{user_id}|{username}|{role}|{ts}|{jti}|{ver_str}"
         expected = hmac.new(self.secret, payload.encode(), hashlib.sha256).hexdigest()
         if not hmac.compare_digest(sig, expected):
             raise AuthError("Token 无效")
 
-        # Token 撤销校验（查 DB）
-        if self._is_revoked(jti):
+        # 短期内存黑名单 (仅做辅助)
+        if jti in self._revoked_jtis:
             raise AuthError("Token 已被撤销")
+
+        # 持久校验: token_version 必须与 DB 当前值一致
+        try:
+            ver = int(ver_str)
+        except ValueError:
+            raise AuthError("Token 格式错误: 非法 ver")
+
+        with self.session_factory() as s:
+            cred = s.execute(
+                select(LocalCredential.token_version).where(
+                    LocalCredential.id == user_id
+                )
+            ).scalar_one_or_none()
+            if cred is None:
+                raise AuthError("Token 无效: 用户不存在")
+            if ver != cred:  # DB 中 token_version 已变 → 该 token 失效
+                raise AuthError("Token 已被撤销")
 
         expires = float(ts) + self.cfg.session_hours * 3600
         if time.time() > expires:
             raise AuthError("Token 已过期")
-        return SessionInfo(user_id, username, role, expires, jti)
-
-    def _is_revoked(self, jti: str) -> bool:
-        """查询 DB 判断 jti 是否已撤销"""
-        with self.session_factory() as s:
-            row = s.execute(
-                select(RevokedToken.jti).where(RevokedToken.jti == jti)
-            ).scalar_one_or_none()
-            return row is not None
+        return SessionInfo(user_id, username, role, expires, jti, ver)
 
     def revoke_token(self, token: str) -> None:
-        """撤销指定 Token（登出用，持久化到 DB）"""
+        """撤销 token：递增对应 LocalCredential.token_version 使 token 失效"""
+        # 先写到内存黑名单 (短期防重放)
+        try:
+            parts = token.split("|")
+            if len(parts) == 7:
+                jti = parts[4]
+                self._revoked_jtis.add(jti)
+        except Exception:
+            pass
+
+        # 持久化: 递增 DB 中该用户的所有 token_version
+        user_id = None
         try:
             info = self.verify_token(token)
-            if info.jti:
-                self._revoke_jti(info.jti, info.user_id)
+            user_id = info.user_id
         except AuthError:
-            # 即使 token 过期/无效，只要能解析出 jti 就写入撤销表
+            # token 已过期/无效但可能 jti 已解析，尝试提取 user_id
             try:
                 parts = token.split("|")
-                if len(parts) == 6:
-                    uid, _, _, _, jti, _ = parts
-                    self._revoke_jti(jti, uid)
+                if len(parts) == 7:
+                    user_id = parts[0]
             except Exception:
                 pass
+        if not user_id:
+            return
 
-    def _revoke_jti(self, jti: str, user_id: str) -> None:
-        """将 jti 写入撤销表（幂等：重复写入无副作用）"""
         with self.session_factory() as s:
-            existing = s.execute(
-                select(RevokedToken).where(RevokedToken.jti == jti)
-            ).scalar_one_or_none()
-            if existing is None:
-                s.add(RevokedToken(jti=jti, revoked_at=time.time(), user_id=user_id))
-                s.commit()
+            s.execute(
+                text(
+                    "UPDATE local_credentials SET token_version = token_version + 1 WHERE id = :uid"
+                ),
+                {"uid": user_id},
+            )
+            s.commit()
 
     def revoke_all_for_user(self, user_id: str) -> int:
-        """撤销某用户的所有 Token（需客户端主动丢弃，但可标记用户级失效）"""
-        # DB 中以 user_id 标记，未来可加入全局会话版本号
-        return 0
+        """撤回某用户的所有 token（递增其 token_version）"""
+        with self.session_factory() as s:
+            s.execute(
+                text(
+                    "UPDATE local_credentials SET token_version = token_version + 1 WHERE id = :uid"
+                ),
+                {"uid": user_id},
+            )
+            s.commit()
+        return 1
 
     def create_user(self, username: str, password: str, role: str) -> str:
         import uuid
+
         uid = str(uuid.uuid4())
         pw_hash = bcrypt.hashpw(
             password.encode(),
             bcrypt.gensalt(rounds=self.cfg.bcrypt_rounds),
         ).decode()
         with self.session_factory() as s:
-            s.add(LocalCredential(
-                id=uid, username=username,
-                password_hash=pw_hash, role=role,
-            ))
+            s.add(
+                LocalCredential(
+                    id=uid,
+                    username=username,
+                    password_hash=pw_hash,
+                    role=role,
+                )
+            )
             s.commit()
         return uid
 
     def user_count(self) -> int:
         from sqlalchemy import func
+
         with self.session_factory() as s:
-            return s.execute(select(func.count()).select_from(LocalCredential)).scalar_one()
+            return s.execute(
+                select(func.count()).select_from(LocalCredential)
+            ).scalar_one()

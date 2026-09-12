@@ -1,11 +1,12 @@
 """应用层：会员服务"""
+
 from __future__ import annotations
+
 import logging
 import uuid
-from typing import Optional
 
-from app.infra.db.models import Member as MemberModel
 from app.infra.db.engine import session_factory
+from app.infra.db.models import Member as MemberModel
 
 log = logging.getLogger(__name__)
 
@@ -17,11 +18,14 @@ class MemberService:
     def list_members(self, page: int = 1, page_size: int = 50) -> dict:
         with session_factory() as s:
             total = s.query(MemberModel).filter_by(merchant_id=self.merchant_id).count()
-            items = s.query(MemberModel).filter_by(
-                merchant_id=self.merchant_id
-            ).order_by(MemberModel.created_at.desc()).offset(
-                (page - 1) * page_size
-            ).limit(page_size).all()
+            items = (
+                s.query(MemberModel)
+                .filter_by(merchant_id=self.merchant_id)
+                .order_by(MemberModel.created_at.desc())
+                .offset((page - 1) * page_size)
+                .limit(page_size)
+                .all()
+            )
             return {
                 "total": total,
                 "page": page,
@@ -29,18 +33,22 @@ class MemberService:
                 "items": [self._to_dict(m) for m in items],
             }
 
-    def get_member(self, member_id: str) -> Optional[dict]:
+    def get_member(self, member_id: str) -> dict | None:
         with session_factory() as s:
-            m = s.query(MemberModel).filter_by(
-                id=member_id, merchant_id=self.merchant_id
-            ).first()
+            m = (
+                s.query(MemberModel)
+                .filter_by(id=member_id, merchant_id=self.merchant_id)
+                .first()
+            )
             return self._to_dict(m) if m else None
 
-    def find_by_phone(self, phone: str) -> Optional[dict]:
+    def find_by_phone(self, phone: str) -> dict | None:
         with session_factory() as s:
-            m = s.query(MemberModel).filter_by(
-                merchant_id=self.merchant_id, phone=phone
-            ).first()
+            m = (
+                s.query(MemberModel)
+                .filter_by(merchant_id=self.merchant_id, phone=phone)
+                .first()
+            )
             return self._to_dict(m) if m else None
 
     def create_member(self, data: dict) -> dict:
@@ -66,21 +74,27 @@ class MemberService:
         if amount_cents <= 0:
             raise ValueError("Recharge amount must be positive")
         with session_factory() as s:
-            m = s.query(MemberModel).filter_by(
-                id=member_id, merchant_id=self.merchant_id
-            ).first()
+            m = (
+                s.query(MemberModel)
+                .filter_by(id=member_id, merchant_id=self.merchant_id)
+                .first()
+            )
             if not m:
                 raise ValueError("Member not found")
             m.balance += amount_cents
             s.commit()
-            log.info(f"Member {m.name} recharged: +{amount_cents} cents (new balance: {m.balance})")
+            log.info(
+                f"Member {m.name} recharged: +{amount_cents} cents (new balance: {m.balance})"
+            )
             return self._to_dict(m)
 
     def deduct_balance(self, member_id: str, amount_cents: int) -> dict:
         with session_factory() as s:
-            m = s.query(MemberModel).filter_by(
-                id=member_id, merchant_id=self.merchant_id
-            ).first()
+            m = (
+                s.query(MemberModel)
+                .filter_by(id=member_id, merchant_id=self.merchant_id)
+                .first()
+            )
             if not m:
                 raise ValueError("Member not found")
             if m.balance < amount_cents:
@@ -113,7 +127,9 @@ class MemberService:
             ("10003", "王五", "13700009012", 0, 80, "normal"),
         ]
         with session_factory() as s:
-            existing = s.query(MemberModel).filter_by(merchant_id=self.merchant_id).count()
+            existing = (
+                s.query(MemberModel).filter_by(merchant_id=self.merchant_id).count()
+            )
             if existing > 0:
                 return 0
             for card, name, phone, bal, pts, lvl in demo:

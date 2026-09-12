@@ -1,8 +1,8 @@
-from fastapi import APIRouter, Request, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 
-from app.kernel.auth.engine import AuthError
 from app.bootstrap import clear_initial_password_file
+from app.kernel.auth.engine import AuthError
 
 router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
 

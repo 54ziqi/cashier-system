@@ -1,14 +1,16 @@
 """cashier 命令组"""
+
 from __future__ import annotations
+
 import argparse
 import socket
 import sys
 import webbrowser
 from pathlib import Path
 
-from app.config import load_settings
-from app.bootstrap import bootstrap
 from app import create_app, setup_logging
+from app.bootstrap import bootstrap
+from app.config import load_settings
 
 
 def _find_port(host: str, start: int, auto: bool) -> int:
@@ -30,18 +32,23 @@ def cmd_serve(args):
     setup_logging(settings)
     bootstrap(settings)
 
-    port = _find_port(settings.server.host, args.port or settings.server.port,
-                      settings.server.auto_port)
+    port = _find_port(
+        settings.server.host,
+        args.port or settings.server.port,
+        settings.server.auto_port,
+    )
     settings.server.port = port
 
     app = create_app(settings)
 
     if settings.server.open_browser and not args.no_browser:
         import threading
+
         url = f"http://localhost:{port}"
         threading.Timer(1.5, lambda: webbrowser.open(url)).start()
 
     import uvicorn
+
     uvicorn.run(
         app,
         host=settings.server.host,
@@ -60,9 +67,10 @@ def cmd_init(args):
 
     from app.infra.db.engine import init_engine
     from app.infra.db.migrations import run_migrations
+
     init_engine(settings)
     tables = run_migrations()
-    print(f"✅ 初始化完成")
+    print("✅ 初始化完成")
     print(f"   数据目录: {settings.home}")
     print(f"   数据库:   {settings.db_path}")
     print(f"   已建表:   {len(tables)} 张")
@@ -73,12 +81,14 @@ def cmd_license(args):
 
     if args.action == "status":
         from app.kernel.license.verifier import LicenseVerifier
-        pub = (settings.secrets_dir / "license_pub.pem")
+
+        pub = settings.secrets_dir / "license_pub.pem"
         if not pub.exists():
             print("❌ 未初始化，请先运行 cashier init")
             sys.exit(1)
-        verifier = LicenseVerifier(pub.read_bytes(),
-                                   grace_days=settings.license.grace_days)
+        verifier = LicenseVerifier(
+            pub.read_bytes(), grace_days=settings.license.grace_days
+        )
         r = verifier.verify(settings.license_path)
         print(f"状态: {r.status}")
         print(f"说明: {r.message}")
@@ -105,7 +115,11 @@ def cmd_backup(args):
         sys.exit(1)
 
     ts = datetime.now().strftime("%Y%m%d-%H%M%S")
-    out = Path(args.to).expanduser() if args.to else settings.backup_dir / f"backup-{ts}.zip"
+    out = (
+        Path(args.to).expanduser()
+        if args.to
+        else settings.backup_dir / f"backup-{ts}.zip"
+    )
     out.parent.mkdir(parents=True, exist_ok=True)
 
     with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as z:
@@ -120,8 +134,12 @@ def cmd_status(args):
     settings = load_settings(args.profile)
     print(f"配置目录: {settings.home}")
     print(f"数据目录: {settings.home / 'data'}")
-    print(f"数据库:   {settings.db_path}  ({'存在' if settings.db_path.exists() else '不存在'})")
-    print(f"License:  {settings.license_path}  ({'存在' if settings.license_path.exists() else '不存在'})")
+    print(
+        f"数据库:   {settings.db_path}  ({'存在' if settings.db_path.exists() else '不存在'})"
+    )
+    print(
+        f"License:  {settings.license_path}  ({'存在' if settings.license_path.exists() else '不存在'})"
+    )
 
 
 def main():

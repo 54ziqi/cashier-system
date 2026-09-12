@@ -2,7 +2,7 @@ import logging
 import threading
 import time
 
-from app.infra.hardware.base import ScaleCallback, BaseDevice, DeviceInfo
+from app.infra.hardware.base import BaseDevice, DeviceInfo
 
 log = logging.getLogger(__name__)
 
@@ -55,6 +55,7 @@ class SerialScaleDriver(BaseDevice):
     def connect(self) -> bool:
         try:
             import serial
+
             self._ser = serial.Serial(
                 port=self._port,
                 baudrate=self._baudrate,
@@ -121,13 +122,15 @@ class SerialScaleDriver(BaseDevice):
                     weight = self._parse_frame(frame, cfg)
                     if weight is not None:
                         self._last_weight = weight
-                        self._notify({
-                            "type": "weight",
-                            "weight": self.current_weight,
-                            "raw": weight,
-                            "stable": self._is_stable,
-                            "tare": self._tare_weight,
-                        })
+                        self._notify(
+                            {
+                                "type": "weight",
+                                "weight": self.current_weight,
+                                "raw": weight,
+                                "stable": self._is_stable,
+                                "tare": self._tare_weight,
+                            }
+                        )
                 else:
                     time.sleep(0.05)
             except Exception as e:
@@ -140,7 +143,10 @@ class SerialScaleDriver(BaseDevice):
             we = cfg.get("weight_end", 9)
             weight_str = frame[ws:we].decode("ascii", errors="ignore").strip()
 
-            if not weight_str or not weight_str.replace(".", "").replace("-", "").isdigit():
+            if (
+                not weight_str
+                or not weight_str.replace(".", "").replace("-", "").isdigit()
+            ):
                 return None
 
             weight_val = float(weight_str)

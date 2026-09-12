@@ -1,10 +1,12 @@
 """Auth 模块测试：登录 / Token 验证 / 过期 / 撤销 / 暴力锁定"""
+
 from __future__ import annotations
+
 import time
 
 import pytest
 
-from app.kernel.auth.engine import OfflineAuthEngine, AuthError, SessionInfo
+from app.kernel.auth.engine import AuthError, SessionInfo
 from tests.conftest import _TEST_ADMIN_PWD
 
 
@@ -16,7 +18,7 @@ class TestOfflineAuthEngine:
         token = auth_engine.login("admin", self._get_admin_password(auth_engine))
         assert isinstance(token, str)
         assert len(token) > 50
-        assert token.count("|") == 5  # 包含 jti
+        assert token.count("|") == 6  # 包含 jti + ver (session version)
 
     def test_login_wrong_password(self, auth_engine):
         """错误密码应抛出 AuthError"""
@@ -53,7 +55,7 @@ class TestOfflineAuthEngine:
 
     def test_verify_expired_token(self, auth_engine, monkeypatch):
         """过期 Token 应被拒绝"""
-        import app.kernel.auth.engine as engine_mod
+
         # monkeypatch: 将 session_hours 设为极小值
         token = auth_engine.login("admin", self._get_admin_password(auth_engine))
         monkeypatch.setattr(auth_engine.cfg, "session_hours", -1)  # 立即过期
@@ -67,6 +69,7 @@ class TestOfflineAuthEngine:
         # 解锁
         from app.infra.db.engine import session_factory
         from app.infra.db.models import LocalCredential
+
         try:
             with session_factory() as s:
                 cred = s.query(LocalCredential).filter_by(username="admin").first()
@@ -113,6 +116,21 @@ class TestOfflineAuthEngine:
         info = auth_engine.verify_token(token2)
         assert info.jti != token1.split("|")[4]  # 不同 jti
 
+    def test_revoke_via_version_invalidates_token(self, auth_engine):
+        """P1-W7: revoke_token 递增 token_version, 旧 Token 失效, 新 Token 有效"""
+        token_old = auth_engine.login("admin", self._get_admin_password(auth_engine))
+        info = auth_engine.verify_token(token_old)
+        assert info.ver == 0
+        # 登出 → token_version 0 → 1
+        auth_engine.revoke_token(token_old)
+        # 旧 token 失效
+        with pytest.raises(AuthError, match="撤销"):
+            auth_engine.verify_token(token_old)
+        # 新 Token v=1 仍有效
+        token_new = auth_engine.login("admin", self._get_admin_password(auth_engine))
+        info_new = auth_engine.verify_token(token_new)
+        assert info_new.ver == 1
+
     def _get_admin_password(self, auth_engine) -> str:
         """返回测试用 admin 密码"""
         return _TEST_ADMIN_PWD
@@ -124,16 +142,20 @@ class TestAuthAPI:
     def test_login_endpoint(self, client):
         """POST /api/v1/auth/login 应返回 token"""
         pwd = self._get_admin_pwd(client)
-        resp = client.post("/api/v1/auth/login", json={"username": "admin", "password": pwd})
+        resp = client.post(
+            "/api/v1/auth/login", json={"username": "admin", "password": pwd}
+        )
         assert resp.status_code == 200
         data = resp.json()
         assert "token" in data
         assert data["token_type"] == "local"
-        assert data["token"].count("|") == 5  # 含 jti
+        assert data["token"].count("|") == 6  # 含 jti + ver
 
     def test_login_wrong_password_401(self, client):
         """错误密码返回 401"""
-        resp = client.post("/api/v1/auth/login", json={"username": "admin", "password": "wrong"})
+        resp = client.post(
+            "/api/v1/auth/login", json={"username": "admin", "password": "wrong"}
+        )
         assert resp.status_code == 401
 
     def test_logout_requires_token(self, client):
@@ -144,23 +166,33 @@ class TestAuthAPI:
     def test_logout_revokes_token(self, client):
         """登出后 Token 失效"""
         pwd = self._get_admin_pwd(client)
-        login_resp = client.post("/api/v1/auth/login", json={"username": "admin", "password": pwd})
+        login_resp = client.post(
+            "/api/v1/auth/login", json={"username": "admin", "password": pwd}
+        )
         token = login_resp.json()["token"]
 
         # 登出
-        logout_resp = client.post("/api/v1/auth/logout", headers={"Authorization": f"Bearer {token}"})
+        logout_resp = client.post(
+            "/api/v1/auth/logout", headers={"Authorization": f"Bearer {token}"}
+        )
         assert logout_resp.status_code == 200
 
         # Token 已失效
-        me_resp = client.get("/api/v1/auth/me", headers={"Authorization": f"Bearer {token}"})
+        me_resp = client.get(
+            "/api/v1/auth/me", headers={"Authorization": f"Bearer {token}"}
+        )
         assert me_resp.status_code == 401
 
     def test_me_endpoint(self, client):
         """/me 返回当前用户信息"""
         pwd = self._get_admin_pwd(client)
-        login_resp = client.post("/api/v1/auth/login", json={"username": "admin", "password": pwd})
+        login_resp = client.post(
+            "/api/v1/auth/login", json={"username": "admin", "password": pwd}
+        )
         token = login_resp.json()["token"]
-        me_resp = client.get("/api/v1/auth/me", headers={"Authorization": f"Bearer {token}"})
+        me_resp = client.get(
+            "/api/v1/auth/me", headers={"Authorization": f"Bearer {token}"}
+        )
         assert me_resp.status_code == 200
         data = me_resp.json()
         assert data["username"] == "admin"

@@ -4,27 +4,29 @@
 按日结文件签名 → HTTPS POST 到云端 /cloud/v1/ingest
 推送失败 → 写入 .pending 队列，下次重试。
 """
+
 from __future__ import annotations
 
 import json
 import logging
 import urllib.request
-from datetime import datetime, timezone
 from pathlib import Path
 
 log = logging.getLogger(__name__)
 
-CLOUD_URL = "http://localhost:9000"   # 覆盖为云端实际地址
+CLOUD_URL = "http://localhost:9000"  # 覆盖为云端实际地址
 PUSH_QUEUE = Path("cloud_export/.pending")
 
 
 def push_digest(file: Path, cloud_url: str = CLOUD_URL, timeout: float = 10.0) -> bool:
     """推送日结文件到云端。返回 True 表示成功。"""
     record = json.loads(file.read_text(encoding="utf-8"))
-    body = json.dumps({
-        "payload": record["payload"],
-        "sig":     record["signature"],
-    }).encode()
+    body = json.dumps(
+        {
+            "payload": record["payload"],
+            "sig": record["signature"],
+        }
+    ).encode()
 
     req = urllib.request.Request(
         f"{cloud_url}/cloud/v1/ingest",
@@ -70,11 +72,14 @@ def retry_pending(cloud_url: str = CLOUD_URL, max_retry: int = 5) -> tuple[int, 
     return ok, fail
 
 
-def scheduled_push(priv_pem: bytes, cloud_url: str = CLOUD_URL, **digest_kwargs) -> bool:
+def scheduled_push(
+    priv_pem: bytes, cloud_url: str = CLOUD_URL, **digest_kwargs
+) -> bool:
     """
     一键日结 + 签名 + 推送 + 失败入队。由 lifespan 的 scheduled job 调用。
     """
     from .daily_export import export_signed_digest
+
     try:
         file = export_signed_digest(priv_pem, **digest_kwargs)
         if not push_digest(file, cloud_url):

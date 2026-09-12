@@ -1,5 +1,7 @@
 """配置加载：default.toml → {profile}.toml → 环境变量 → 默认值"""
+
 from __future__ import annotations
+
 import os
 from pathlib import Path
 from typing import Any
@@ -89,8 +91,7 @@ class Settings(BaseModel):
         return self.home / "data" / "license.lic"
 
     def ensure_dirs(self) -> None:
-        for p in (self.home / "data", self.secrets_dir,
-                  self.logs_dir, self.backup_dir):
+        for p in (self.home / "data", self.secrets_dir, self.logs_dir, self.backup_dir):
             p.mkdir(parents=True, exist_ok=True)
 
 
@@ -116,7 +117,7 @@ def _env_overrides() -> dict:
     for key, val in os.environ.items():
         if not key.startswith("CASHIER_"):
             continue
-        parts = key[len("CASHIER_"):].lower().split("__")
+        parts = key[len("CASHIER_") :].lower().split("__")
         if len(parts) < 2:
             continue
         node = out
@@ -133,8 +134,11 @@ def _env_overrides() -> dict:
 
 def load_settings(profile: str = "lite") -> Settings:
     here = Path(__file__).resolve().parent
-    cfg_dir = (here.parent / "config") if (here.parent / "config").exists() \
-              else (here / "config")
+    cfg_dir = (
+        (here.parent / "config")
+        if (here.parent / "config").exists()
+        else (here / "config")
+    )
 
     merged = _load_toml(cfg_dir / "default.toml")
     merged = _deep_merge(merged, _load_toml(cfg_dir / f"{profile}.toml"))

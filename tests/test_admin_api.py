@@ -1,6 +1,6 @@
 """Admin API 认证测试：无 Token / 无效 Token / 有效管理员 Token"""
+
 from __future__ import annotations
-import pytest
 
 
 class TestAdminAPIAuth:

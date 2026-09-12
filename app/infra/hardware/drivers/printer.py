@@ -1,5 +1,4 @@
 import logging
-from pathlib import Path
 
 from app.infra.hardware.base import BaseDevice, DeviceInfo
 
@@ -24,7 +23,7 @@ class ReceiptPrinterDriver(BaseDevice):
 
     def connect(self) -> bool:
         try:
-            from escpos.printer import Usb, Serial, Network
+            from escpos.printer import Network, Serial, Usb
 
             conn_type = self.info.connection_type
             if conn_type.value == "usb":
@@ -106,7 +105,9 @@ class ReceiptPrinterDriver(BaseDevice):
             p.text(f"支付方式: {order_data.get('pay_method', '')}\n")
 
             if order_data.get("member_name"):
-                p.text(f"会员: {order_data.get('member_name')} (积分+{order_data.get('points_earned', 0)})\n")
+                p.text(
+                    f"会员: {order_data.get('member_name')} (积分+{order_data.get('points_earned', 0)})\n"
+                )
 
             p.text("\n\n")
             p.set(align="center")

@@ -1,8 +1,11 @@
 """进程内事件总线"""
+
 from __future__ import annotations
-from collections import defaultdict
-from typing import Any, Callable
+
 import logging
+from collections import defaultdict
+from collections.abc import Callable
+from typing import Any
 
 log = logging.getLogger(__name__)
 

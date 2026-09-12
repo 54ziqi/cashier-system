@@ -1,14 +1,26 @@
 """领域层：商品聚合根"""
+
 from __future__ import annotations
 
 
 class Product:
     """商品聚合根"""
 
-    def __init__(self, id: str, merchant_id: str, name: str, price: int,
-                 barcode: str = "", category_id: str = "", cost_price: int = 0,
-                 stock: float = 0, unit: str = "pcs", is_weighing: bool = False,
-                 icon: str = "📦", status: str = "active"):
+    def __init__(
+        self,
+        id: str,
+        merchant_id: str,
+        name: str,
+        price: int,
+        barcode: str = "",
+        category_id: str = "",
+        cost_price: int = 0,
+        stock: float = 0,
+        unit: str = "pcs",
+        is_weighing: bool = False,
+        icon: str = "📦",
+        status: str = "active",
+    ):
         self.id = id
         self.merchant_id = merchant_id
         self.name = name
