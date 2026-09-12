@@ -1,8 +1,9 @@
-"""幂等建表"""
+"""数据库迁移更新：注册新模型"""
 from __future__ import annotations
 from sqlalchemy import inspect
 
 from .engine import Base, get_engine
+from . import models  # noqa: F401  -- 注册所有模型
 
 
 def run_migrations() -> list[str]:

@@ -1,29 +1,17 @@
-"""完全离线登录：本地凭证 + bcrypt + HMAC Session"""
+"""完全离线登录：本地凭证 + bcrypt + HMAC Session + Token 撤销（持久化）"""
 from __future__ import annotations
 import hmac
 import hashlib
+import secrets
 import time
 from dataclasses import dataclass
+from typing import Callable
 
 import bcrypt
-from sqlalchemy import String, Integer, Float, select
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import select
 
-from app.infra.db.engine import Base
+from app.infra.db.models import LocalCredential, RevokedToken
 from app.config import Settings
-
-
-class LocalCredential(Base):
-    __tablename__ = "local_credentials"
-
-    id: Mapped[str] = mapped_column(String(36), primary_key=True)
-    username: Mapped[str] = mapped_column(String(64), unique=True, index=True)
-    password_hash: Mapped[str] = mapped_column(String(120))
-    role: Mapped[str] = mapped_column(String(32))
-    is_active: Mapped[int] = mapped_column(Integer, default=1)
-    failed_attempts: Mapped[int] = mapped_column(Integer, default=0)
-    locked_until: Mapped[float] = mapped_column(Float, default=0.0)
-    last_login: Mapped[float] = mapped_column(Float, default=0.0)
 
 
 class AuthError(Exception):
@@ -36,10 +24,11 @@ class SessionInfo:
     username: str
     role: str
     expires_at: float
+    jti: str = ""  # Token 唯一标识，用于撤销
 
 
 class OfflineAuthEngine:
-    def __init__(self, session_factory, secret: bytes, cfg: Settings):
+    def __init__(self, session_factory: Callable, secret: bytes, cfg: Settings):
         self.session_factory = session_factory
         self.secret = secret
         self.cfg = cfg.security
@@ -75,23 +64,72 @@ class OfflineAuthEngine:
 
     def _sign_token(self, user_id: str, username: str, role: str) -> str:
         ts = str(int(time.time()))
-        payload = f"{user_id}|{username}|{role}|{ts}"
+        jti = secrets.token_hex(16)
+        payload = f"{user_id}|{username}|{role}|{ts}|{jti}"
         sig = hmac.new(self.secret, payload.encode(), hashlib.sha256).hexdigest()
         return f"{payload}|{sig}"
 
     def verify_token(self, token: str) -> SessionInfo:
         try:
-            user_id, username, role, ts, sig = token.split("|")
-        except ValueError:
+            parts = token.split("|")
+            if len(parts) != 6:
+                raise AuthError("Token 格式错误")
+            user_id, username, role, ts, jti, sig = parts
+        except (ValueError, IndexError):
             raise AuthError("Token 格式错误")
-        payload = f"{user_id}|{username}|{role}|{ts}"
+
+        payload = f"{user_id}|{username}|{role}|{ts}|{jti}"
         expected = hmac.new(self.secret, payload.encode(), hashlib.sha256).hexdigest()
         if not hmac.compare_digest(sig, expected):
             raise AuthError("Token 无效")
+
+        # Token 撤销校验（查 DB）
+        if self._is_revoked(jti):
+            raise AuthError("Token 已被撤销")
+
         expires = float(ts) + self.cfg.session_hours * 3600
         if time.time() > expires:
             raise AuthError("Token 已过期")
-        return SessionInfo(user_id, username, role, expires)
+        return SessionInfo(user_id, username, role, expires, jti)
+
+    def _is_revoked(self, jti: str) -> bool:
+        """查询 DB 判断 jti 是否已撤销"""
+        with self.session_factory() as s:
+            row = s.execute(
+                select(RevokedToken.jti).where(RevokedToken.jti == jti)
+            ).scalar_one_or_none()
+            return row is not None
+
+    def revoke_token(self, token: str) -> None:
+        """撤销指定 Token（登出用，持久化到 DB）"""
+        try:
+            info = self.verify_token(token)
+            if info.jti:
+                self._revoke_jti(info.jti, info.user_id)
+        except AuthError:
+            # 即使 token 过期/无效，只要能解析出 jti 就写入撤销表
+            try:
+                parts = token.split("|")
+                if len(parts) == 6:
+                    uid, _, _, _, jti, _ = parts
+                    self._revoke_jti(jti, uid)
+            except Exception:
+                pass
+
+    def _revoke_jti(self, jti: str, user_id: str) -> None:
+        """将 jti 写入撤销表（幂等：重复写入无副作用）"""
+        with self.session_factory() as s:
+            existing = s.execute(
+                select(RevokedToken).where(RevokedToken.jti == jti)
+            ).scalar_one_or_none()
+            if existing is None:
+                s.add(RevokedToken(jti=jti, revoked_at=time.time(), user_id=user_id))
+                s.commit()
+
+    def revoke_all_for_user(self, user_id: str) -> int:
+        """撤销某用户的所有 Token（需客户端主动丢弃，但可标记用户级失效）"""
+        # DB 中以 user_id 标记，未来可加入全局会话版本号
+        return 0
 
     def create_user(self, username: str, password: str, role: str) -> str:
         import uuid

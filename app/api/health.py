@@ -10,14 +10,10 @@ async def live():
 
 
 @router.get("/health/ready")
-async def ready(request: Request):
-    lic = request.app.state.license
-    ok = lic.status in ("valid", "grace")
-    return JSONResponse(
-        status_code=200 if ok else 503,
-        content={
-            "status": "ready" if ok else "degraded",
-            "license": lic.status,
-            "license_message": lic.message,
-        },
-    )
+async def ready():
+    """
+    就绪探针：返回服务本身是否可对外工作。
+    License 详情仅通过 /api/v1/admin/... 授权接口查询，
+    避免攻击者通过探针获取授权状态。
+    """
+    return {"status": "ready"}

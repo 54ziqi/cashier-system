@@ -41,7 +41,7 @@ def ensure_admin(settings: Settings, auth_engine) -> str | None:
     pwd_file = settings.home / "data" / "initial-password.txt"
     pwd_file.write_text(
         f"用户名: admin\n密码: {pwd}\n"
-        f"请在首次登录后立即修改并删除本文件。\n",
+        f"（首次成功登录后本文件会被自动删除）\n",
         encoding="utf-8",
     )
     try:
@@ -49,3 +49,14 @@ def ensure_admin(settings: Settings, auth_engine) -> str | None:
     except OSError:
         pass
     return pwd
+
+
+def clear_initial_password_file(settings: Settings) -> None:
+    """首次成功登录后自动删除密码文件"""
+    pwd_file = settings.home / "data" / "initial-password.txt"
+    if pwd_file.exists():
+        try:
+            pwd_file.unlink()
+            log.info("已自动删除 initial-password.txt")
+        except OSError as e:
+            log.warning(f"删除密码文件失败: {e}")

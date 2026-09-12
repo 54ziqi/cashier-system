@@ -1,14 +1,14 @@
 """FastAPI 启动/关闭钩子"""
 from __future__ import annotations
 import logging
+import time
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
 from app.config import Settings
 from app.bootstrap import ensure_admin
-from app.infra.db.engine import init_engine, session_factory
-from app.infra.db.write_queue import start_writer
+from app.infra.db.engine import init_engine, session_factory, get_engine
 from app.infra.db.migrations import run_migrations
 from app.kernel.auth.engine import OfflineAuthEngine
 from app.kernel.license.verifier import LicenseVerifier
@@ -23,7 +23,6 @@ async def lifespan(app: FastAPI):
 
     init_engine(settings)
     run_migrations()
-    start_writer()
 
     app.state.auth = OfflineAuthEngine(
         session_factory=session_factory,
@@ -52,6 +51,37 @@ async def lifespan(app: FastAPI):
     app.state.license = result
     log.info("License 状态: %s (%s)", result.status, result.message)
 
+    # Seed demo data
+    from app.application.product.product_service import ProductService
+    from app.application.member.member_service import MemberService
+    n_products = ProductService(merchant_id="local").seed_demo_products()
+    n_members = MemberService(merchant_id="local").seed_demo_members()
+    if n_products:
+        log.info(f"Seeded {n_products} demo products")
+    if n_members:
+        log.info(f"Seeded {n_members} demo members")
+
     print(f"✅ Cashier 已启动  |  License: {result.status}")
+    if n_products:
+        print(f"  已写入 {n_products} 个示例商品")
+    if n_members:
+        print(f"  已写入 {n_members} 个示例会员")
+
+    # 启动时间戳（用于运行时长统计）
+    app.state.started_at = time.time()
+
     yield
-    log.info("Cashier 关闭")
+
+    # ========== 优雅关闭 ==========
+    log.info("Cashier 正在关闭...")
+
+    # 1. 停止接受新请求后，关闭数据库连接池
+    try:
+        engine = get_engine()
+        engine.dispose()
+        log.info("已关闭数据库连接池")
+    except Exception as e:
+        log.warning(f"关闭数据库时出错: {e}")
+
+    elapsed = time.time() - getattr(app.state, 'started_at', time.time())
+    log.info(f"Cashier 已关闭 (运行 {elapsed:.1f}s)")
