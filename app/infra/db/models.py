@@ -11,7 +11,40 @@ def now():
     return datetime.now(timezone.utc)
 
 
+class Tenant(Base):
+    """
+    租户表：每店一行。由 License payload 写入，店名/等级/父租户 ID 受激活码保护不可本地修改。
+
+    license_type: single | chain_parent | chain_node
+    license_tier: single | chain_flagship | chain_unlimited (仅 chain_parent 填写)
+    """
+    __tablename__ = "tenants"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    # ── 激活码锁定字段 (本地不可修改) ──
+    license_store_name: Mapped[str] = mapped_column(String(128), nullable=False, default="未授权门店")
+    license_type: Mapped[str] = mapped_column(String(16), nullable=False, default="single")  # single | chain_parent | chain_node
+    license_tier: Mapped[str] = mapped_column(String(16), default="single")                   # single | chain_flagship | chain_unlimited
+    parent_tenant_id: Mapped[str | None] = mapped_column(String(36), nullable=True, default=None)
+    max_stores: Mapped[int] = mapped_column(Integer, default=1)        # 母店配额
+    hardware_fingerprint: Mapped[str] = mapped_column(String(128), nullable=True, default=None)
+
+    # ── 经营信息 (本地可改) ──
+    contact_name: Mapped[str] = mapped_column(String(64), nullable=True, default=None)
+    phone: Mapped[str] = mapped_column(String(32), nullable=True, default=None)
+    address: Mapped[str] = mapped_column(String(256), nullable=True, default=None)
+
+    status: Mapped[str] = mapped_column(String(16), default="active")
+    license_expire_at: Mapped[datetime] = mapped_column(DateTime)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=now)
+
+
 class Merchant(Base):
+    """
+    兼容旧表名：POS 端代码中 Merchant 引用全部平滑迁移到 Tenant。
+    本模型保留用于兼容已有 admin API 接口，实际 CRUD 落到 tenants 表。
+    """
     __tablename__ = "merchants"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True)

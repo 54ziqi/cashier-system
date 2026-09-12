@@ -12,3 +12,46 @@
 
 <!-- Toast 容器 -->
 <div id="toast-container"></div>
+
+<!--
+  收银系统仪表面板入口
+  - 单店 / 连锁 已登录用户 → 点击跳转 /dashboard
+  - 未登录时隐藏（login-page 显式控制）
+-->
+<style>
+  #dash-entry {
+    position: fixed; right: 24px; bottom: 24px; z-index: 9999;
+    display: none;
+  }
+  #dash-entry a {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--c-green); color: #fff;
+    padding: 12px 20px; border-radius: 999px;
+    font-weight: 600; font-size: 14px;
+    box-shadow: var(--shadow-lg);
+    text-decoration: none;
+    transition: transform .15s, box-shadow .15s;
+  }
+  #dash-entry a:hover { transform: translateY(-2px); box-shadow: var(--shadow-xl); }
+  #dash-entry a:active { transform: scale(0.96); }
+</style>
+<div id="dash-entry">
+  <a href="/dashboard" title="📊 查看销售看板">📊 数据看板</a>
+</div>
+<script>
+  // 登录完成后让悬浮按钮可见
+  (function(){
+    var entry = document.getElementById('dash-entry');
+    if (!entry) return;
+    var style = entry.style;
+    setInterval(function(){
+      var token = localStorage.getItem('cashier_token');
+      var mainApp = document.getElementById('main-app');
+      var mainVisible = mainApp && getComputedStyle(mainApp).display !== 'none';
+      if (token && mainVisible) style.display = 'block';
+      else if (!mainVisible) style.display = 'none';
+    }, 1200);
+  })();
+</script>
+</body>
+</html>

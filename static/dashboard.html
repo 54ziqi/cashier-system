@@ -1,0 +1,846 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>收银数据看板</title>
+  <link rel="stylesheet" href="/static/css/app.css">
+  <link rel="stylesheet" href="/static/css/pages.css">
+  <link rel="stylesheet" href="/static/css/ui-upgrade.css">
+  <script>
+    // ============ 鉴权守卫 ============
+    (function() {
+      var token = localStorage.getItem('cashier_token');
+      if (!token) {
+        window.location.href = '/';
+      }
+    })();
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <style>
+    /* ============ Dashboard 专属样式 ============ */
+    body { overflow: auto; }
+
+    .dash-wrap {
+      display: flex; flex-direction: column;
+      min-height: 100vh; background: var(--c-bg);
+    }
+
+    /* ---- 顶部 header ---- */
+    .dash-header {
+      height: 56px;
+      background: var(--c-primary);
+      color: #fff;
+      display: flex; align-items: center;
+      padding: 0 24px;
+      gap: 12px;
+      position: sticky; top: 0; z-index: 200;
+      box-shadow: 0 2px 12px rgba(15,23,42,.25);
+    }
+    .dash-header .dh-brand {
+      font-size: 17px; font-weight: 700;
+      display: flex; align-items: center; gap: 8px;
+      margin-right: 4px; white-space: nowrap;
+    }
+    .dash-header .dh-store {
+      font-size: 13px; opacity: .7;
+      margin-right: auto; white-space: nowrap;
+    }
+    .dash-header .license-badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 3px 10px; border-radius: 20px;
+      font-size: 11px; font-weight: 600;
+      background: rgba(255,255,255,.12);
+    }
+    .license-badge--single  { background: rgba(16,185,129,.25) !important; color: #d1fae5; }
+    .license-badge--parent  { background: rgba(14,165,233,.25) !important; color: #bae6fd; }
+    .license-badge--node    { background: rgba(245,158,11,.25) !important; color: #fde68a; }
+
+    .dh-date-tabs { display: flex; gap: 2px; }
+    .dh-date-tabs button {
+      padding: 5px 14px; border-radius: 6px;
+      color: rgba(255,255,255,.6);
+      font-size: 13px; font-weight: 500;
+      transition: all .15s;
+    }
+    .dh-date-tabs button:hover { background: rgba(255,255,255,.08); color: #fff; }
+    .dh-date-tabs button.active { background: var(--c-green); color: #fff; font-weight: 600; }
+
+    .btn-refresh {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 5px 10px; border-radius: 6px;
+      background: rgba(255,255,255,.1); color: rgba(255,255,255,.75);
+      font-size: 12px; font-weight: 500; cursor: pointer;
+      border: none; transition: all .15s;
+    }
+    .btn-refresh:hover { background: rgba(255,255,255,.2); color: #fff; }
+
+    .dh-actions { display: flex; gap: 6px; align-items: center; }
+    .dh-actions a {
+      color: rgba(255,255,255,.65); font-size: 12px;
+      padding: 5px 10px; border-radius: 6px;
+      transition: background .15s; text-decoration: none;
+    }
+    .dh-actions a:hover { background: rgba(255,255,255,.12); color: #fff; }
+
+    /* ---- Tab 栏 ---- */
+    .dash-tabs {
+      display: flex; align-items: flex-end;
+      padding: 0 24px;
+      border-bottom: 1px solid var(--c-border);
+      background: var(--c-bg-card);
+      position: sticky; top: 56px; z-index: 100;
+      overflow-x: auto;
+    }
+    .dash-tabs::-webkit-scrollbar { height: 0; }
+    .dash-tabs .tab {
+      padding: 12px 20px;
+      font-size: 14px; font-weight: 500;
+      color: var(--c-text-muted);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: color .15s, border-color .15s;
+      white-space: nowrap;
+    }
+    .dash-tabs .tab:hover { color: var(--c-text); }
+    .dash-tabs .tab.active { color: var(--c-green); border-bottom-color: var(--c-green); font-weight: 600; }
+
+    /* ---- 视图 = display none / block ---- */
+    .dash-view { display: none; padding: 24px; }
+    .dash-view.active { display: block; }
+
+    /* ---- 统计卡片 ---- */
+    .dash-stat-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    @media (max-width: 768px) {
+      .dash-stat-row { grid-template-columns: repeat(2, 1fr); }
+    }
+    .dash-stat-card {
+      background: var(--c-bg-card);
+      border: 1px solid var(--c-border);
+      border-radius: var(--r-lg);
+      padding: 20px 24px;
+      display: flex; flex-direction: column;
+      justify-content: center;
+      box-shadow: var(--shadow-sm);
+      transition: box-shadow .2s;
+    }
+    .dash-stat-card:hover { box-shadow: var(--shadow-md); }
+    .dash-stat-card .stat-label {
+      font-size: 13px; color: var(--c-text-muted);
+      margin-bottom: 8px;
+    }
+    .dash-stat-card .stat-value {
+      font-size: 28px; font-weight: 800;
+      color: var(--c-primary);
+      font-feature-settings: "tnum";
+      line-height: 1.2;
+    }
+    .stat-value.c-green  { color: var(--c-green); }
+    .stat-value.c-amber  { color: var(--c-amber); }
+    .stat-value.c-red    { color: var(--c-red); }
+    .stat-value.c-blue   { color: var(--c-blue); }
+    .dash-stat-card .stat-sub {
+      font-size: 12px; color: var(--c-text-muted);
+      margin-top: 4px;
+    }
+    .stat-sub.up   { color: var(--c-green); font-weight: 600; }
+    .stat-sub.down { color: var(--c-red);   font-weight: 600; }
+
+    /* ---- Chart 容器 ---- */
+    .chart-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+      gap: 16px;
+    }
+    .chart-card {
+      background: var(--c-bg-card);
+      border: 1px solid var(--c-border);
+      border-radius: var(--r-lg);
+      padding: 20px 24px;
+      box-shadow: var(--shadow-sm);
+    }
+    .chart-card h4 {
+      font-size: 14px; font-weight: 600;
+      color: var(--c-text-secondary);
+      margin-bottom: 16px;
+    }
+    .chart-card .chart-box { height: 280px; position: relative; }
+    .chart-card.full { grid-column: 1 / -1; }
+
+    /* ---- 数据表格 ---- */
+    .dash-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .dash-table th {
+      padding: 10px 14px; text-align: left;
+      background: var(--c-bg); border-bottom: 1px solid var(--c-border);
+      font-weight: 600; color: var(--c-text-muted); font-size: 12px;
+    }
+    .dash-table td { padding: 10px 14px; border-bottom: 1px solid var(--c-border-light); }
+    .dash-table tr:hover td { background: var(--c-bg-hover); }
+
+    /* ---- Loading ---- */
+    .dash-loading {
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      height: 200px; color: var(--c-text-muted);
+      font-size: 14px; gap: 12px;
+    }
+    .dash-loading .spinner {
+      width: 28px; height: 28px;
+      border: 3px solid var(--c-border);
+      border-top-color: var(--c-green);
+      border-radius: 50%;
+      animation: dashSpin .7s linear infinite;
+    }
+    @keyframes dashSpin { to { transform: rotate(360deg); } }
+
+    /* ---- 空状态 ---- */
+    .dash-empty {
+      display: flex; align-items: center; justify-content: center;
+      height: 200px; color: var(--c-text-muted); font-size: 14px;
+    }
+
+    /* ---- 底部 ---- */
+    .dash-footer {
+      height: 40px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; color: var(--c-text-muted);
+      background: var(--c-bg-card);
+      border-top: 1px solid var(--c-border);
+      margin-top: auto;
+    }
+
+    /* ---- 门店卡片 ---- */
+    .chain-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 16px;
+    }
+    .chain-card {
+      background: var(--c-bg-card);
+      border: 1px solid var(--c-border);
+      border-radius: var(--r-lg);
+      padding: 20px;
+      box-shadow: var(--shadow-sm);
+    }
+    .chain-card h5 {
+      font-size: 15px; font-weight: 600;
+      margin-bottom: 8px;
+    }
+    .chain-card .cc-row {
+      display: flex; justify-content: space-between;
+      font-size: 13px; color: var(--c-text-secondary);
+      padding: 4px 0;
+    }
+    .chain-card .cc-row .val { font-weight: 600; color: var(--c-text); }
+  </style>
+</head>
+<body>
+
+<!-- Toast 容器 -->
+<div id="toast-container"></div>
+
+<!-- 整体包裹 -->
+<div class="dash-wrap" id="dash-wrap">
+
+  <!-- ========== 顶部 Header ========== -->
+  <header class="dash-header">
+    <div class="dh-brand">📊 收银数据看板</div>
+    <div class="dh-store" id="dash-store-name">--</div>
+    <span class="license-badge license-badge--single"  id="badge-single"  style="display:none;">单店</span>
+    <span class="license-badge license-badge--parent"  id="badge-parent"  style="display:none;">连锁总部</span>
+    <span class="license-badge license-badge--node"    id="badge-node"    style="display:none;">连锁门店</span>
+
+    <div class="dh-date-tabs" id="date-range-tabs">
+      <button data-range="7d"  class="active">近 7 天</button>
+      <button data-range="30d">近 30 天</button>
+      <button data-range="90d">近 90 天</button>
+    </div>
+
+    <button class="btn-refresh" id="btn-refresh" title="刷新全部数据">↻ 刷新</button>
+
+    <div class="dh-actions">
+      <a href="/">↩ 返回 POS</a>
+    </div>
+  </header>
+
+  <!-- ========== Tab 栏 ========== -->
+  <nav class="dash-tabs" id="dash-tabbar">
+    <a class="tab active" data-view="overview" href="javascript:void(0)">概览</a>
+    <a class="tab" data-view="trend" href="javascript:void(0)">趋势</a>
+    <a class="tab" data-view="category" href="javascript:void(0)">品类</a>
+    <a class="tab" data-view="hourly" href="javascript:void(0)">时段</a>
+    <a class="tab" data-view="member" href="javascript:void(0)">会员</a>
+    <a class="tab" data-view="cashier" href="javascript:void(0)">收银员</a>
+    <a class="tab" data-view="chain" id="tab-chain" href="javascript:void(0)" style="display:none;">门店</a>
+  </nav>
+
+  <!-- ========== 内容区 ========== -->
+  <div class="dash-content">
+
+    <!-- 概览 -->
+    <section class="dash-view active" id="view-overview">
+      <div class="dash-stat-row" id="overview-stats">
+        <!-- JS 渲染卡片 -->
+      </div>
+      <div class="chart-card full">
+        <h4>近 7 日销售额 / 订单数趋势</h4>
+        <div class="chart-box"><canvas id="chart-overview"></canvas></div>
+      </div>
+    </section>
+
+    <!-- 趋势 -->
+    <section class="dash-view" id="view-trend">
+      <div class="chart-card full">
+        <h4>日销售额趋势</h4>
+        <div class="chart-box"><canvas id="chart-trend"></canvas></div>
+      </div>
+    </section>
+
+    <!-- 品类 -->
+    <section class="dash-view" id="view-category">
+      <div class="chart-card full">
+        <h4>热销品类 Top 15（按销售额）</h4>
+        <div class="chart-box" style="height:500px;"><canvas id="chart-category"></canvas></div>
+      </div>
+    </section>
+
+    <!-- 时段 -->
+    <section class="dash-view" id="view-hourly">
+      <div class="chart-card full">
+        <h4>24 小时客流分布</h4>
+        <div class="chart-box" style="height:320px;"><canvas id="chart-hourly"></canvas></div>
+      </div>
+    </section>
+
+    <!-- 会员 -->
+    <section class="dash-view" id="view-member">
+      <div class="chart-grid">
+        <div class="chart-card">
+          <h4>会员 vs 非会员占比</h4>
+          <div class="chart-box"><canvas id="chart-member-donut"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <h4>Top 10 消费会员</h4>
+          <div id="member-top-table"><div class="dash-loading"><div class="spinner"></div></div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 收银员 -->
+    <section class="dash-view" id="view-cashier">
+      <div class="chart-card full">
+        <h4>收银员销售额排行（近 30 天）</h4>
+        <div class="chart-box" style="height:420px;"><canvas id="chart-cashier"></canvas></div>
+      </div>
+    </section>
+
+    <!-- 门店（仅连锁） -->
+    <section class="dash-view" id="view-chain">
+      <div id="chain-store-cards">
+        <div class="dash-loading"><div class="spinner"></div><span>加载中...</span></div>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- ========== 底部 ========== -->
+  <footer class="dash-footer">
+    ℹ️ 数据来源：本地 SQLite · 仅展示聚合数据
+  </footer>
+
+</div><!-- /dash-wrap -->
+
+<script src="/static/js/toast.js"></script>
+<script src="/static/js/api.js"></script>
+<script>
+/* ====================================================================
+ *  Dashboard 主逻辑
+ * ==================================================================== */
+;(function() {
+  'use strict';
+
+  /* ---------- 取 CSS 变量作为 Chart 配色 ---------- */
+  var styles    = getComputedStyle(document.documentElement);
+  var C_GREEN   = styles.getPropertyValue('--c-green').trim()   || '#10B981';
+  var C_AMBER   = styles.getPropertyValue('--c-amber').trim()   || '#F59E0B';
+  var C_BLUE    = styles.getPropertyValue('--c-blue').trim()    || '#3B82F6';
+  var C_RED     = styles.getPropertyValue('--c-red').trim()     || '#EF4444';
+  var C_PRIMARY = styles.getPropertyValue('--c-primary').trim() || '#0F172A';
+  var C_MUTED   = styles.getPropertyValue('--c-text-muted').trim() || '#94A3B8';
+  var C_BORDER  = styles.getPropertyValue('--c-border').trim()   || '#E2E8F0';
+
+  /* 全局 Chart 默认 */
+  Chart.defaults.font.family = styles.getPropertyValue('--font').trim();
+  Chart.defaults.font.size = 12;
+  Chart.defaults.plugins.legend.display = false;
+  Chart.defaults.plugins.tooltip.titleFont = { size: 12 };
+  Chart.defaults.plugins.tooltip.bodyFont  = { size: 12 };
+
+  /* ---------- API 封装 ---------- */
+  function getToken() { return localStorage.getItem('cashier_token') || ''; }
+
+  function apiGet(path) {
+    var token = getToken();
+    return fetch(path, {
+      headers: { 'Authorization': 'Bearer ' + token }
+    }).then(function(resp) {
+      if (resp.status === 401) {
+        localStorage.removeItem('cashier_token');
+        window.location.href = '/';
+        throw new Error('未登录');
+      }
+      return resp.json().then(function(data) {
+        if (!resp.ok) throw new Error(data.detail || '请求失败');
+        return data;
+      });
+    });
+  }
+
+  /* ---------- 工具函数 ---------- */
+  function fen2yuan(fen) {
+    if (fen == null || fen === '') return '0.00';
+    return (Number(fen) / 100).toFixed(2);
+  }
+
+  function fmtNum(n) {
+    if (n == null) return '--';
+    return Number(n).toLocaleString('zh-CN');
+  }
+
+  function toast(msg, type) {
+    type = type || 'info';
+    if (window.Toast && window.Toast[type]) {
+      window.Toast[type](msg);
+    }
+  }
+
+  /* ---------- 状态 ---------- */
+  var currentRange = '7d';
+  var charts = {};  // { chartName: Chart实例 }
+
+  /* ====================================================================
+   *  1. 初始化
+   * ==================================================================== */
+  async function init() {
+    // Tab 绑定
+    document.querySelectorAll('#dash-tabbar .tab').forEach(function(tab) {
+      tab.addEventListener('click', function() {
+        switchTab(tab.dataset.view);
+      });
+    });
+
+    // 日期范围
+    document.querySelectorAll('#date-range-tabs button').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        document.querySelectorAll('#date-range-tabs button').forEach(function(b) { b.classList.remove('active'); });
+        btn.classList.add('active');
+        currentRange = btn.dataset.range;
+        loadAll();
+      });
+    });
+
+    // 刷新按钮
+    document.getElementById('btn-refresh').addEventListener('click', function() { loadAll(); });
+
+    /* 加载租户信息，判断 License 与 chain_view */
+    try {
+      var tenant = await apiGet('/api/v1/dashboard/tenant');
+      document.getElementById('dash-store-name').textContent = (tenant.store_name ? '· ' + tenant.store_name : '');
+
+      var lic = tenant.license_type || 'single';
+      if (lic === 'chain_parent') { document.getElementById('badge-parent').style.display = ''; }
+      else if (lic === 'chain_node') { document.getElementById('badge-node').style.display = ''; }
+      else { document.getElementById('badge-single').style.display = ''; }
+
+      if (tenant.features && tenant.features.chain_view) {
+        document.getElementById('tab-chain').style.display = '';
+      }
+    } catch (e) { /* 租户接口失败不影响整体 */ }
+
+    // 默认加载概览
+    loadOverview();
+  }
+
+  /* ====================================================================
+   * 2. Tab 切换
+   * ==================================================================== */
+  function switchTab(view) {
+    // 更新 tab 样式
+    document.querySelectorAll('#dash-tabbar .tab').forEach(function(el) {
+      el.classList.toggle('active', el.dataset.view === view);
+    });
+    // 切换视图
+    document.querySelectorAll('.dash-view').forEach(function(el) {
+      el.classList.toggle('active', el.id === 'view-' + view);
+    });
+
+    // 按需加载
+    switch (view) {
+      case 'overview': loadOverview(); break;
+      case 'trend':    loadTrend();    break;
+      case 'category': loadCategory(); break;
+      case 'hourly':   loadHourly();   break;
+      case 'member':   loadMember();   break;
+      case 'cashier':  loadCashier();  break;
+      case 'chain':    loadChain();    break;
+    }
+  }
+
+  /* ====================================================================
+   * 3. 刷新全部
+   * ==================================================================== */
+  function loadAll() {
+    // 销毁所有图表再重建
+    Object.keys(charts).forEach(function(k) { if (charts[k]) charts[k].destroy(); });
+    charts = {};
+    var active = document.querySelector('.dash-view.active');
+    if (active) switchTab(active.id.replace('view-', ''));
+  }
+
+  /* ====================================================================
+   * 4. 概览
+   * ==================================================================== */
+  async function loadOverview() {
+    var container = document.getElementById('overview-stats');
+    container.innerHTML = '<div class="dash-loading" style="grid-column:1/-1"><div class="spinner"></div><span>加载中...</span></div>';
+
+    try {
+      var data = await apiGet('/api/v1/dashboard/overview');
+      var rev  = fen2yuan(data.today_revenue);
+      var yoy  = data.yoy_percent != null ? data.yoy_percent.toFixed(1) : '--';
+      var yoyUp = (data.yoy_percent || 0) >= 0;
+
+      container.innerHTML =
+        statCard('💰 今日销售额', '¥' + rev, yoyUp ? 'up' : 'down',
+                 (yoyUp ? '↑' : '↓') + ' ' + Math.abs(data.yoy_percent || 0).toFixed(1) + '% vs 昨日') +
+        statCard('📋 今日订单数', fmtNum(data.today_count), '', '客单价 ¥' + fen2yuan(data.avg_ticket)) +
+        statCard('🎫 平均客单价', '¥' + fen2yuan(data.avg_ticket), '', '--') +
+        statCard('📈 昨日销售额', '¥' + fen2yuan(data.yesterday_revenue), '', '同期对比');
+
+      // 柱图
+      var daily = data.daily_7 || [];
+      var labels = daily.map(function(d) { return (d.date || '').slice(5); /* MM-DD */ });
+      var revArr = daily.map(function(d) { return (d.revenue || 0) / 100; });
+      var cntArr = daily.map(function(d) { return d.count || 0; });
+
+      if (charts.overview) charts.overview.destroy();
+      charts.overview = new Chart(document.getElementById('chart-overview').getContext('2d'), {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [
+            {
+              label: '销售额(元)', data: revArr,
+              backgroundColor: C_GREEN + 'CC', borderRadius: 6,
+              yAxisID: 'y'
+            },
+            {
+              label: '订单数', data: cntArr,
+              type: 'line', borderColor: C_AMBER,
+              backgroundColor: C_AMBER + '22',
+              pointRadius: 3, pointBackgroundColor: C_AMBER,
+              tension: 0.3, fill: true, yAxisID: 'y1'
+            }
+          ]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          plugins: { legend: { display: true, position: 'top', labels: { font: { size: 11 } } } },
+          scales: {
+            y: { beginAtZero: true, position: 'left',
+                 ticks: { callback: function(v) { return '¥' + v; } },
+                 grid: { color: C_BORDER } },
+            y1: { beginAtZero: true, position: 'right',
+                  grid: { drawOnChartArea: false } }
+          }
+        }
+      });
+    } catch (e) {
+      container.innerHTML = '<div class="dash-empty">加载失败：' + e.message + '</div>';
+      toast('概览数据加载失败：' + e.message, 'error');
+    }
+  }
+
+  function statCard(label, value, subClass, subText) {
+    return '<div class="dash-stat-card">' +
+             '<div class="stat-label">' + label + '</div>' +
+             '<div class="stat-value' + (subClass ? ' c-' + (subClass === 'up' ? 'green' : 'red') : '') + '">' + value + '</div>' +
+             (subText ? '<div class="stat-sub ' + (subClass || '') + '">' + subText + '</div>' : '') +
+           '</div>';
+  }
+
+  /* ====================================================================
+   * 5. 趋势
+   * ==================================================================== */
+  async function loadTrend() {
+    try {
+      var data = await apiGet('/api/v1/dashboard/trend?range=' + currentRange);
+      var daily = data.daily || [];
+      var labels = daily.map(function(d) { return (d.date || '').slice(5); });
+      var revArr = daily.map(function(d) { return (d.revenue || 0) / 100; });
+      var cntArr = daily.map(function(d) { return d.count || 0; });
+
+      if (charts.trend) charts.trend.destroy();
+      charts.trend = new Chart(document.getElementById('chart-trend').getContext('2d'), {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [
+            { label: '销售额(元)', data: revArr, borderColor: C_GREEN, backgroundColor: C_GREEN + '22',
+              tension: 0.35, fill: true, pointRadius: 3, pointBackgroundColor: C_GREEN },
+            { label: '订单数', data: cntArr, borderColor: C_AMBER, backgroundColor: C_AMBER + '22',
+              tension: 0.35, fill: true, pointRadius: 3, pointBackgroundColor: C_AMBER }
+          ]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          plugins: { legend: { display: true, position: 'top', labels: { font: { size: 11 } } } },
+          scales: {
+            y: { beginAtZero: true, grid: { color: C_BORDER } },
+            x: { grid: { display: false } }
+          }
+        }
+      });
+    } catch (e) {
+      toast('趋势数据加载失败：' + e.message, 'error');
+    }
+  }
+
+  /* ====================================================================
+   * 6. 品类
+   * ==================================================================== */
+  async function loadCategory() {
+    try {
+      var data = await apiGet('/api/v1/dashboard/category?days=30');
+      var items = (data.items || []).slice(0, 15);
+      // 销售额降序
+      items.sort(function(a, b) { return (b.revenue || 0) - (a.revenue || 0); });
+
+      var labels = items.map(function(i) { return i.category || '未知'; });
+      var revArr = items.map(function(i) { return (i.revenue || 0) / 100; });
+
+      // 颜色渐变
+      var colors = labels.map(function(_, idx) {
+        var alpha = 0.9 - (idx * 0.05);
+        return alpha < 0.3 ? 0.3 : alpha;
+      });
+      var bgColors = colors.map(function(a) { return C_BLUE + Math.round(a * 255).toString(16).padStart(2, '0'); });
+
+      if (charts.category) charts.category.destroy();
+      charts.category = new Chart(document.getElementById('chart-category').getContext('2d'), {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{ label: '销售额(元)', data: revArr, backgroundColor: bgColors, borderRadius: 4 }]
+        },
+        options: {
+          indexAxis: 'y',
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { beginAtZero: true, grid: { color: C_BORDER },
+                 ticks: { callback: function(v) { return '¥' + v; } } },
+            y: { grid: { display: false } }
+          }
+        }
+      });
+    } catch (e) {
+      toast('品类数据加载失败：' + e.message, 'error');
+    }
+  }
+
+  /* ====================================================================
+   * 7. 时段
+   * ==================================================================== */
+  async function loadHourly() {
+    try {
+      var data = await apiGet('/api/v1/dashboard/hourly?days=7');
+      var hours = data.hourly || [];
+      // 构建 24 小时完整数据
+      var revMap = {};
+      hours.forEach(function(h) {
+        if (h.hour != null) revMap[Number(h.hour)] = (h.revenue || 0) / 100;
+      });
+      var revArr = [];
+      var bgColors = [];
+      var peak = 0;
+      for (var i = 0; i < 24; i++) {
+        var v = revMap[i] || 0;
+        revArr.push(v);
+        if (v > peak) peak = v;
+      }
+      // 高峰高亮 (>60% of peak)
+      revArr.forEach(function(v) {
+        bgColors.push(v > peak * 0.6 ? C_AMBER + 'CC' : C_GREEN + 'AA');
+      });
+      var labels = [];
+      for (var j = 0; j < 24; j++) { labels.push(j + ':00'); }
+
+      if (charts.hourly) charts.hourly.destroy();
+      charts.hourly = new Chart(document.getElementById('chart-hourly').getContext('2d'), {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{ label: '销售额(元)', data: revArr, backgroundColor: bgColors, borderRadius: 4 }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { grid: { display: false } },
+            y: { beginAtZero: true, grid: { color: C_BORDER },
+                 ticks: { callback: function(v) { return '¥' + v; } } }
+          }
+        }
+      });
+    } catch (e) {
+      toast('时段数据加载失败：' + e.message, 'error');
+    }
+  }
+
+  /* ====================================================================
+   * 8. 会员
+   * ==================================================================== */
+  async function loadMember() {
+    try {
+      var data = await apiGet('/api/v1/dashboard/member');
+      var memberRev   = data.member_revenue   || 0;
+      var nonMemRev   = data.non_member_revenue || 0;
+      var topList     = data.top_members || [];
+
+      // 环形图
+      if (charts.memberDonut) charts.memberDonut.destroy();
+      charts.memberDonut = new Chart(document.getElementById('chart-member-donut').getContext('2d'), {
+        type: 'doughnut',
+        data: {
+          labels: ['会员', '非会员'],
+          datasets: [{
+            data: [memberRev / 100, nonMemRev / 100],
+            backgroundColor: [C_GREEN, C_AMBER],
+            borderWidth: 0
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: {
+            legend: { display: true, position: 'bottom', labels: { font: { size: 11 } } },
+            tooltip: { callbacks: { label: function(c) { return c.label + ': ¥' + c.parsed.toFixed(2); } } }
+          }
+        }
+      });
+
+      // Top 10 表
+      var html = '<table class="dash-table"><thead><tr>'
+               + '<th style="width:40px">#</th>'
+               + '<th>会员</th><th>手机号</th><th>消费次数</th><th>累计消费(元)</th>'
+               + '</tr></thead><tbody>';
+      topList.slice(0, 10).forEach(function(m, idx) {
+        html += '<tr>'
+              + '<td>' + (idx + 1) + '</td>'
+              + '<td>' + (m.name || '--') + '</td>'
+              + '<td>' + (m.phone ? m.phone.replace(/(\d{3})\d{4}(\d{4})/, '$1****$2') : '--') + '</td>'
+              + '<td>' + (m.order_count || 0) + '</td>'
+              + '<td style="font-weight:600">¥' + fen2yuan(m.total_revenue) + '</td>'
+              + '</tr>';
+      });
+      if (topList.length === 0) {
+        html += '<tr><td colspan="5" style="text-align:center;color:var(--c-text-muted)">暂无数据</td></tr>';
+      }
+      html += '</tbody></table>';
+      document.getElementById('member-top-table').innerHTML = html;
+    } catch (e) {
+      toast('会员数据加载失败：' + e.message, 'error');
+    }
+  }
+
+  /* ====================================================================
+   * 9. 收银员
+   * ==================================================================== */
+  async function loadCashier() {
+    try {
+      var data = await apiGet('/api/v1/dashboard/cashier?days=30');
+      var items = (data.cashiers || []).sort(function(a, b) {
+        return (b.revenue || 0) - (a.revenue || 0);
+      });
+
+      var labels = items.map(function(i) { return i.cashier_name || '未知'; });
+      var revArr = items.map(function(i) { return (i.revenue || 0) / 100; });
+
+      var bgColors = revArr.map(function(_, idx) {
+        var alpha = 0.95 - (idx * 0.06);
+        return C_GREEN + Math.round(Math.max(alpha, 0.2) * 255).toString(16).padStart(2, '0');
+      });
+
+      if (charts.cashier) charts.cashier.destroy();
+      charts.cashier = new Chart(document.getElementById('chart-cashier').getContext('2d'), {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{ label: '销售额(元)', data: revArr, backgroundColor: bgColors, borderRadius: 4 }]
+        },
+        options: {
+          indexAxis: 'y',
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { beginAtZero: true, grid: { color: C_BORDER },
+                 ticks: { callback: function(v) { return '¥' + v; } } },
+            y: { grid: { display: false } }
+          }
+        }
+      });
+    } catch (e) {
+      toast('收银员数据加载失败：' + e.message, 'error');
+    }
+  }
+
+  /* ====================================================================
+   * 10. 门店（连锁）
+   * ==================================================================== */
+  async function loadChain() {
+    var container = document.getElementById('chain-store-cards');
+    container.innerHTML = '<div class="dash-loading"><div class="spinner"></div><span>加载中...</span></div>';
+    try {
+      var data = await apiGet('/api/v1/dashboard/chain/stores');
+      var stores = data.stores || [];
+      var html = '<div class="chain-grid">';
+      stores.forEach(function(s) {
+        html += '<div class="chain-card">'
+              + '<h5>' + (s.store_name || s.name || '--') + '</h5>'
+              + '<div class="cc-row"><span>门店 ID</span><span class="val">' + (s.id || '--') + '</span></div>'
+              + '<div class="cc-row"><span>今日销售额</span><span class="val">¥' + fen2yuan(s.today_revenue) + '</span></div>'
+              + '<div class="cc-row"><span>订单数</span><span class="val">' + (s.order_count || 0) + '</span></div>'
+              + '<div class="cc-row"><span>状态</span><span class="val">' + (s.status || '正常') + '</span></div>'
+              + '</div>';
+      });
+      html += '</div>';
+      if (stores.length === 0) {
+        html = '<div class="dash-empty">暂无门店数据</div>';
+      }
+      container.innerHTML = html;
+    } catch (e) {
+      container.innerHTML = '<div class="dash-empty">加载失败：' + e.message + '</div>';
+      toast('门店数据加载失败：' + e.message, 'error');
+    }
+  }
+
+  /* ====================================================================
+   * 启动
+   * ==================================================================== */
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+
+})();
+</script>
+
+</body>
+</html>

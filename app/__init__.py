@@ -14,6 +14,7 @@ from app.lifespan import lifespan
 from app.api import health, auth
 from app.api.merchant import products, orders, cashier, categories
 from app.api.admin import tenants, licenses
+from app.api.dashboard import router as dashboard_router
 
 log = logging.getLogger(__name__)
 
@@ -62,6 +63,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(tenants.router)
     app.include_router(licenses.router)
 
+    # Dashboard
+    app.include_router(dashboard_router)
+
     # Static frontend
     static_dir = Path(__file__).resolve().parent.parent / "static"
     if static_dir.exists():
@@ -70,6 +74,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         @app.get("/", response_class=HTMLResponse)
         async def index():
             html = (static_dir / "index.html").read_text(encoding="utf-8")
+            return HTMLResponse(content=html)
+
+        @app.get("/dashboard", response_class=HTMLResponse)
+        async def dashboard():
+            html = (static_dir / "dashboard.html").read_text(encoding="utf-8")
             return HTMLResponse(content=html)
 
     return app
