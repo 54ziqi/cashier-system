@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- 基本应用信息 -->
+    <key>CFBundleName</key>
+    <string>柒号收银</string>
+    <key>CFBundleDisplayName</key>
+    <string>柒号收银系统</string>
+    <key>CFBundleIdentifier</key>
+    <string>com.qihhao.cashier</string>
+    <key>CFBundleVersion</key>
+    <string>3.2.0</string>
+    <key>CFBundleShortVersionString</key>
+    <string>3.2.0</string>
+    <key>CFBundleExecutable</key>
+    <string>收银系统v3.2</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+
+    <!-- 图标文件 -->
+    <key>CFBundleIconFile</key>
+    <string>AppIcon</string>
+
+    <!-- 显示与高 DPI -->
+    <key>NSHighResolutionCapable</key>
+    <true/>
+    <key>LSMinimumSystemVersion</key>
+    <string>10.15</string>
+    <key>NSRequiresAquaSystemAppearance</key>
+    <false/>
+
+    <!-- 文档类型（收银系统不关联文件） -->
+    <key>CFBundleDocumentTypes</key>
+    <array/>
+
+    <!-- 应用程序类别 -->
+    <key>LSApplicationCategoryType</key>
+    <string>public.app-category.business</string>
+</dict>
+</plist>

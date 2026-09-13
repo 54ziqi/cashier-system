@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- 应用内部日志目录，用于 FileProvider 导出 -->
+    <files-path
+        name="logs"
+        path="logs/" />
+    <files-path
+        name="files"
+        path="." />
+    <cache-path
+        name="cache"
+        path="." />
+    <!-- 外部存储数据目录 -->
+    <external-files-path
+        name="external_files"
+        path="." />
+    <external-cache-path
+        name="external_cache"
+        path="." />
+</paths>

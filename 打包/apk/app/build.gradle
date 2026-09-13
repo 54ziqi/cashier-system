@@ -1,0 +1,138 @@
+plugins {
+    id 'com.android.application'
+    id 'org.jetbrains.kotlin.android'
+    id 'com.chaquo.python'
+}
+
+android {
+    namespace = "com.qihhao.pos"
+    compileSdk = 34
+
+    defaultConfig {
+        applicationId "com.qihhao.pos"
+        minSdk = 24
+        targetSdk = 34
+        versionCode = 320
+        versionName "3.2.0"
+
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+
+        // Chaquopy: NDK ABI targets
+        ndk {
+            abiFilters "arm64-v8a", "armeabi-v7a", "x86_64"
+        }
+
+        // Chaquopy: Python source set (project root app/ directory)
+        sourceSets {
+            main {
+                python {
+                    srcDir "../../../../../app"
+                    srcDir "../../../../../config"
+                    srcDir "../../../../../run.py"
+                }
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.debug
+        }
+        debug {
+            debuggable true
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = '17'
+    }
+
+    buildFeatures {
+        viewBinding true
+        buildConfig true
+    }
+
+    packaging {
+        resources {
+            excludes += ['META-INF/DEPENDENCIES', 'META-INF/LICENSE', 'META-INF/LICENSE.txt', 'META-INF/license.txt']
+        }
+    }
+
+    lint {
+        abortOnError false
+    }
+}
+
+dependencies {
+    implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+
+    // AndroidX Core
+    implementation 'androidx.core:core-ktx:1.12.0'
+    implementation 'androidx.appcompat:appcompat:1.6.1'
+    implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
+    implementation 'androidx.activity:activity-ktx:1.8.2'
+    implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.7.0'
+    implementation 'androidx.lifecycle:lifecycle-viewmodel-ktx:2.7.0'
+
+    // WebView
+    implementation 'androidx.webkit:webkit:1.9.0'
+
+    // USB Serial for Android (usb-serial-for-android by mik3y)
+    implementation 'com.github.mik3y:usb-serial-for-android:3.7.0'
+
+    // Gson for JSON parsing
+    implementation 'com.google.code.gson:gson:2.10.1'
+
+    // OkHttp (for WebSocket / API calls if needed by bridge)
+    implementation 'com.squareup.okhttp3:okhttp:4.12.0'
+
+    // Coroutines
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3'
+
+    // Logging
+    implementation 'com.jakewharton.timber:timber:5.0.1'
+
+    // Test
+    testImplementation 'junit:junit:4.13.2'
+    androidTestImplementation 'androidx.test.ext:junit:1.1.5'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
+}
+
+// Chaquopy: Python dependencies
+python {
+    pip {
+        install "fastapi>=0.115"
+        install "uvicorn[standard]>=0.32"
+        install "pydantic>=2.9"
+        install "pydantic-settings>=2.5"
+        install "sqlalchemy>=2.0.35"
+        install "bcrypt>=4.2"
+        install "cryptography>=43.0"
+        install "tomli>=2.0"
+        install "python-multipart"
+        install "jinja2"
+        install "httpx"
+        install "psutil"
+    }
+}
+
+// Copy static files for embedding
+tasks.register('copyStaticAsset', Copy) {
+    from "../../../../../static"
+    into "$buildDir/intermediates/python/assets/source/static"
+}
+preBuild.dependsOn copyStaticAsset
+
+// Copy config files
+tasks.register('copyConfigAsset', Copy) {
+    from "../../../../../config"
+    into "$buildDir/intermediates/python/assets/source/config"
+}
+preBuild.dependsOn copyConfigAsset

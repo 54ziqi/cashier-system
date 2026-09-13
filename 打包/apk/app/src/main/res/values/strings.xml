@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">柒号收银</string>
+    <string name="error_no_usb_permission">无 USB 设备访问权限</string>
+    <string name="error_no_usb_device">未检测到 USB 设备</string>
+    <string name="error_python_init">Python 初始化失败</string>
+    <string name="error_server_start">服务启动失败</string>
+    <string name="notify_channel_name">收银服务</string>
+    <string name="notify_channel_desc">Python 后端服务通知</string>
+    <string name="notify_service_running">收银系统运行中</string>
+</resources>

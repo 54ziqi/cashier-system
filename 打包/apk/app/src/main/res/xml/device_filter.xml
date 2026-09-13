@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    USB 设备过滤器 — 常见收银外设 VID/PID
+    支持常见的 USB 串口芯片、扫码枪、钱箱等设备
+-->
+<resources>
+    <!-- FTDI FT232 -->
+    <usb-device vendor-id="1027" product-id="24577" />
+    <usb-device vendor-id="1027" product-id="24596" />
+    <usb-device vendor-id="1027" product-id="24592" />
+    <usb-device vendor-id="1027" product-id="24593" />
+    <usb-device vendor-id="1027" product-id="24597" />
+
+    <!-- Prolific PL2303 -->
+    <usb-device vendor-id="1659" product-id="8963" />
+    <usb-device vendor-id="1659" product-id="4660" />
+    <usb-device vendor-id="1659" product-id="8964" />
+
+    <!-- CH340/CH341 -->
+    <usb-device vendor-id="6790" product-id="29987" />
+    <usb-device vendor-id="6790" product-id="21795" />
+    <usb-device vendor-id="6790" product-id="30752" />
+
+    <!-- CP210x (Silicon Labs) -->
+    <usb-device vendor-id="4292" product-id="60000" />
+    <usb-device vendor-id="4292" product-id="60016" />
+    <usb-device vendor-id="4292" product-id="61440" />
+    <usb-device vendor-id="4292" product-id="60017" />
+
+    <!-- 常见 USB HID 扫码枪 (HID Keyboard 模式) -->
+    <usb-device vendor-id="1266" product-id="4" />
+    <usb-device vendor-id="1529" product-id="16385" />
+
+    <!-- Sunplus POS 打印机 -->
+    <usb-device vendor-id="1137" product-id="84" />
+    <usb-device vendor-id="1137" product-id="72" />
+    <usb-device vendor-id="1137" product-id="96" />
+    <usb-device vendor-id="1137" product-id="77" />
+    <usb-device vendor-id="1137" product-id="42" />
+
+    <!-- 常见钱箱 (USB 串口模式) -->
+    <usb-device vendor-id="1027" product-id="24592" />
+
+</resources>
