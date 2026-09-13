@@ -51,6 +51,11 @@ class Tenant(Base):
         String(128), nullable=True, default=None
     )
 
+    # ── 业态模板 (本地可改) ──
+    industry: Mapped[str] = mapped_column(
+        String(32), nullable=False, default="fast_food",
+    )  # fast_food | full_service | beverage | hotpot | bakery | retail
+
     # ── 经营信息 (本地可改) ──
     contact_name: Mapped[str] = mapped_column(String(64), nullable=True, default=None)
     phone: Mapped[str] = mapped_column(String(32), nullable=True, default=None)
@@ -124,6 +129,12 @@ class Product(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=now)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=now)
 
+    # ── 行业扩展字段（JSON 形式避免 schema 频繁变更） ──
+    is_combo: Mapped[int] = mapped_column(Integer, default=0)         # 是否套餐
+    bom_json: Mapped[str] = mapped_column(Text, nullable=True, default=None)  # 配方 JSON
+    is_86: Mapped[int] = mapped_column(Integer, default=0)             # 是否沽清
+    specs_json: Mapped[str] = mapped_column(Text, nullable=True, default=None)  # 扩展属性 JSON
+
     __table_args__ = (
         UniqueConstraint("merchant_id", "barcode", name="uq_product_barcode"),
     )
@@ -155,6 +166,27 @@ class Member(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=now)
 
     __table_args__ = (UniqueConstraint("merchant_id", "phone", name="uq_member_phone"),)
+
+
+class ProductSpecOption(Base):
+    """商品选项值：每个选项的一个可选值（如中杯/大杯）"""
+    __tablename__ = "product_spec_options"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    product_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    option_name: Mapped[str] = mapped_column(String(64), nullable=False)    # 杯型/温度/糖度/辣度
+    value: Mapped[str] = mapped_column(String(64), nullable=False)          # 中杯/少冰/三分糖/微辣
+    price_delta: Mapped[int] = mapped_column(Integer, default=0)            # 差价（分）
+
+
+class ProductSpecGroup(Base):
+    """商品选项组：每种选项类型定义，如"杯型"组、"糖度"组"""
+    __tablename__ = "product_spec_groups"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    product_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    group_name: Mapped[str] = mapped_column(String(64), nullable=False)
+    required: Mapped[bool] = mapped_column(Integer, default=0)             # 是否必选
+    min_select: Mapped[int] = mapped_column(Integer, default=1)
+    max_select: Mapped[int] = mapped_column(Integer, default=1)
 
 
 class Order(Base):
