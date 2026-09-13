@@ -40,3 +40,7 @@ Thumbs.db
 .pytest_cache/
 .coverage
 htmlcov/
+
+# 打包输出（临时构建产物）
+打包/*/输出/
+打包/输出/

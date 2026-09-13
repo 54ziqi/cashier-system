@@ -79,6 +79,8 @@ License 不仅是功能开关，还是门店的数字身份证：
 - **API** 层仅做 HTTP 入参校验与响应序列化，薄适配。
 - **Infra** 层封装 SQLite 访问、硬件驱动、云同步队列，可替换。
 
+前端样式采用 `tokens-merged.css` 统一设计令牌系统，合并了色彩（中性/语义/行业/订单状态）、8pt 网格间距、四级圆角与阴影、玻璃拟态、动效曲线等令牌，通过 `:root` 变量层零依赖实现主题切换（含暗色）。
+
 ### 云端聚合 (独立进程)
 
 POS 与云端**物理解耦**：
@@ -146,7 +148,7 @@ pytest -q
 | 持久化 | SQLAlchemy 2 + SQLite (WAL) |
 | 鉴权 | bcrypt + HMAC Session Token + DB 持久化撤销表 |
 | 许可证 | RSA-PSS 签名 + AES-GCM 硬件指纹绑定 |
-| 前端 | 原生 HTML5 / CSS3 / Chart.js（零构建步骤） |
+| 前端 | 原生 HTML5 / CSS / Chart.js（零构建步骤） |
 | 硬件 | pyserial / python-escpos / qrcode（可选） |
 | 推送签名 | RSA-SHA256 + HTTPS |
 | 实时 | WebSocket 双向 (云端聚合) |
