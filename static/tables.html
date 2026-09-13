@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>柒号收银 · 桌台管理</title>
+  <link rel="stylesheet" href="/static/css/tokens-merged.css">
   <link rel="stylesheet" href="/static/css/app.css">
   <link rel="stylesheet" href="/static/css/pages.css">
-  <link rel="stylesheet" href="/static/css/brand.css">
   <link rel="stylesheet" href="/static/css/ui-upgrade.css">
   <link rel="stylesheet" href="/static/css/m1-tables.css">
   <link rel="stylesheet" href="/static/css/m1-receipt.css">
@@ -33,7 +33,7 @@
   <div class="tables-page-toolbar">
     <button class="btn btn-green" id="btn-create-table">＋ 新建桌台</button>
     <button class="btn btn-outline" id="btn-layout-toggle">布局编辑</button>
-    <div style="margin-left:auto;display:flex;gap:12px;font-size:12px;color:var(--c-text-muted);align-items:center;">
+    <div style="margin-left:auto;display:flex;gap:12px;font-size:12px;color:var(--qh-ink-mute);align-items:center;">
       <span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:50%;background:#94A3B8;display:inline-block;"></span>空闲</span>
       <span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:50%;background:#F59E0B;display:inline-block;"></span>就餐中</span>
       <span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:50%;background:#3B82F6;display:inline-block;"></span>已预留</span>
@@ -45,7 +45,7 @@
 
   <div class="tables-empty-standalone" id="tables-empty" style="display:none;">
     <div style="font-size:64px;opacity:0.4;">🪑</div>
-    <div style="font-size:16px;color:var(--c-text-muted);">暂无桌台</div>
+    <div style="font-size:16px;color:var(--qh-ink-mute);">暂无桌台</div>
     <button class="btn btn-green" style="margin-top:16px;" onclick="document.getElementById('btn-create-table').click()">
       ＋ 创建第一个桌台
     </button>
@@ -214,11 +214,11 @@
       <div class="qh-confirm-box" role="dialog" aria-modal="true" aria-label="新建桌台">
         <div class="qh-confirm-msg" style="text-align:left;font-weight:600;margin-bottom:16px">＋ 新建桌台</div>
         <div style="margin-bottom:12px">
-          <label style="font-size:13px;color:var(--c-text-secondary);display:block;margin-bottom:4px">桌台名称</label>
+          <label style="font-size:13px;color:var(--qh-ink-soft);display:block;margin-bottom:4px">桌台名称</label>
           <input class="input" id="new-table-name" placeholder="如：7号桌" autofocus>
         </div>
         <div style="margin-bottom:20px">
-          <label style="font-size:13px;color:var(--c-text-secondary);display:block;margin-bottom:4px">座位数</label>
+          <label style="font-size:13px;color:var(--qh-ink-soft);display:block;margin-bottom:4px">座位数</label>
           <input class="input" id="new-table-capacity" type="number" value="4" min="1" max="20">
         </div>
         <div class="qh-confirm-btns">
@@ -287,11 +287,11 @@
       <div class="qh-confirm-box" role="dialog" aria-modal="true" aria-label="编辑桌台">
         <div class="qh-confirm-msg" style="text-align:left;font-weight:600;margin-bottom:16px">✏️ 编辑 ${escapeHtml(table.name)}</div>
         <div style="margin-bottom:12px">
-          <label style="font-size:13px;color:var(--c-text-secondary);display:block;margin-bottom:4px">桌台名称</label>
+          <label style="font-size:13px;color:var(--qh-ink-soft);display:block;margin-bottom:4px">桌台名称</label>
           <input class="input" id="edit-table-name" value="${escapeHtml(table.name)}" autofocus>
         </div>
         <div style="margin-bottom:20px">
-          <label style="font-size:13px;color:var(--c-text-secondary);display:block;margin-bottom:4px">座位数</label>
+          <label style="font-size:13px;color:var(--qh-ink-soft);display:block;margin-bottom:4px">座位数</label>
           <input class="input" id="edit-table-capacity" type="number" value="${table.capacity}" min="1" max="20">
         </div>
         <div class="qh-confirm-btns">

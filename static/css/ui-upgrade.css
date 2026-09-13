@@ -17,23 +17,23 @@
 
 /* ============ 1. 主题通透度升级 ============ */
 :root {
-  --c-glass:           rgba(255, 255, 255, 0.96);
-  --c-green-glass:     rgba(236, 253, 245, 0.85);
-  --c-border-glass:    rgba(226, 232, 240, 0.5);
-  --shadow-float:      0 6px 20px rgba(16, 185, 129, 0.12);
-  --shadow-pulse:      0 0 0 4px rgba(16, 185, 129, 0.18);
+  --qh-glass-bg:           rgba(255, 255, 255, 0.96);
+  --qh-success-bg:     rgba(236, 253, 245, 0.85);
+  --qh-glass-border:    rgba(226, 232, 240, 0.5);
+  --qh-shadow-glow:      0 6px 20px rgba(16, 185, 129, 0.12);
+  --qh-shadow-glow:      0 0 0 4px rgba(16, 185, 129, 0.18);
 }
 
 .card, .stat-card, .report-card, .hw-card, .modal,
 .barcode-dialog, .member-search .card, .products-layout .card {
-  background: var(--c-glass);
-  border-color: var(--c-border-glass);
+  background: var(--qh-glass-bg);
+  border-color: var(--qh-glass-border);
   backdrop-filter: blur(8px);
 }
 .toolbar-static, .hw-bar {
   background: rgba(248, 250, 252, 0.9);
   backdrop-filter: blur(8px);
-  border-color: var(--c-border-glass);
+  border-color: var(--qh-glass-border);
 }
 
 /* ============ 2. 排版数值优化 ============ */
@@ -82,27 +82,27 @@
   animation: productAdd var(--qh-dur-md, 0.4s) var(--qh-ease-standard) forwards;
 }
 @keyframes productAdd {
-  0%   { transform: scale(.92); box-shadow: var(--shadow-float); opacity: .8; }
-  100% { transform: scale(1);   box-shadow: var(--shadow-sm);   opacity: 1; }
+  0%   { transform: scale(.92); box-shadow: var(--qh-shadow-glow); opacity: .8; }
+  100% { transform: scale(1);   box-shadow: var(--qh-shadow-sm);   opacity: 1; }
 }
 
 /* 结算按钮脉冲 */
 .cart-actions .btn-checkout:not(:disabled) {
   animation: pulse 2s ease-in-out infinite;
-  box-shadow: var(--shadow-float);
+  box-shadow: var(--qh-shadow-glow);
 }
 @keyframes pulse {
-  0%, 100% { transform: scale(1);   box-shadow: var(--shadow-float); }
-  50%      { transform: scale(1.02); box-shadow: var(--shadow-pulse); }
+  0%, 100% { transform: scale(1);   box-shadow: var(--qh-shadow-glow); }
+  50%      { transform: scale(1.02); box-shadow: var(--qh-shadow-glow); }
 }
 
 /* 列表行悬浮 */
 .cart-item, .data-table tr, .cat-item {
   transition: all var(--qh-dur-fast, 0.15s) ease !important;
 }
-.cart-item:hover  { background: var(--c-green-glass) !important; transform: translateX(4px) !important; box-shadow: var(--shadow-sm); }
-.data-table tr:hover { background: var(--c-green-glass) !important; }
-.cat-item:hover { background: var(--c-green-bg) !important; transform: translateX(2px) !important; }
+.cart-item:hover  { background: var(--qh-success-bg) !important; transform: translateX(4px) !important; box-shadow: var(--qh-shadow-sm); }
+.data-table tr:hover { background: var(--qh-success-bg) !important; }
+.cat-item:hover { background: var(--qh-success-bg) !important; transform: translateX(2px) !important; }
 
 /* ============ 4. 无障碍 — focus-visible 统一（修复双层 outline 冲突） ============ */
 button:focus-visible, a:focus-visible, input:focus-visible,
@@ -110,7 +110,7 @@ select:focus-visible, textarea:focus-visible,
 .product-card:focus-visible, .pay-method:focus-visible,
 .table-card:focus-visible, .spec-option-btn:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 2px var(--c-green) !important;
+  box-shadow: 0 0 0 2px var(--qh-green) !important;
   border-radius: var(--r-sm);
   z-index: 10;
 }
@@ -144,8 +144,8 @@ select:focus-visible, textarea:focus-visible,
 /* ============ 6. 细部打磨 ============ */
 .input:focus, .barcode-input:focus, .shop-info input:focus,
 .product-form input:focus, .category-form input:focus {
-  border-color: var(--c-green) !important;
-  box-shadow: 0 0 0 3px var(--c-green-bg) !important;
+  border-color: var(--qh-green) !important;
+  box-shadow: 0 0 0 3px var(--qh-success-bg) !important;
 }
 .btn:active { transform: scale(.96) !important; }
 .status-tag.active { font-weight: 600 !important; padding: 3px 10px !important; }
@@ -172,7 +172,7 @@ select:focus-visible, textarea:focus-visible,
   position: absolute; inset: 0;
   border-radius: inherit;
   padding: 1.5px;
-  background: linear-gradient(135deg, var(--c-green) 0%, var(--c-blue) 100%);
+  background: linear-gradient(135deg, var(--qh-green) 0%, var(--qh-info) 100%);
   -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
           mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
@@ -372,7 +372,7 @@ select:focus-visible, textarea:focus-visible,
 }
 .qh-confirm-btns .btn { flex: 1; }
 .qh-confirm-btns .btn:focus-visible {
-  box-shadow: 0 0 0 2px var(--c-green);
+  box-shadow: 0 0 0 2px var(--qh-green);
   outline: none;
 }
 
@@ -454,7 +454,7 @@ select:focus-visible, textarea:focus-visible,
   width: 80px;
   height: 80px;
   border-radius: 50%;
-  background: var(--c-green);
+  background: var(--qh-green);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -485,7 +485,7 @@ select:focus-visible, textarea:focus-visible,
   margin-top: 20px;
   font-size: 22px;
   font-weight: 700;
-  color: var(--c-green);
+  color: var(--qh-green);
   text-align: center;
   animation: checkmarkPop .5s var(--qh-ease-spring, cubic-bezier(.34,1.56,.64,1)) .15s backwards;
 }

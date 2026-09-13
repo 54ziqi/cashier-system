@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>柒号收银 · 本地数据看板</title>
+  <link rel="stylesheet" href="/static/css/tokens-merged.css">
   <link rel="stylesheet" href="/static/css/app.css">
   <link rel="stylesheet" href="/static/css/pages.css">
   <link rel="stylesheet" href="/static/css/ui-upgrade.css">
@@ -23,13 +24,13 @@
 
     .dash-wrap {
       display: flex; flex-direction: column;
-      min-height: 100vh; background: var(--c-bg);
+      min-height: 100vh; background: var(--qh-bg);
     }
 
     /* ---- 顶部 header ---- */
     .dash-header {
       height: 56px;
-      background: var(--c-primary);
+      background: var(--qh-accent);
       color: #fff;
       display: flex; align-items: center;
       padding: 0 24px;
@@ -65,7 +66,7 @@
       border: none; background: transparent; cursor: pointer;
     }
     .dh-date-tabs button:hover { background: rgba(255,255,255,.08); color: #fff; }
-    .dh-date-tabs button.active { background: var(--c-green); color: #fff; font-weight: 600; }
+    .dh-date-tabs button.active { background: var(--qh-green); color: #fff; font-weight: 600; }
 
     .btn-refresh {
       display: inline-flex; align-items: center; gap: 4px;
@@ -88,8 +89,8 @@
     .dash-tabs {
       display: flex; align-items: flex-end;
       padding: 0 24px;
-      border-bottom: 1px solid var(--c-border);
-      background: var(--c-bg-card);
+      border-bottom: 1px solid var(--qh-line);
+      background: var(--qh-surface);
       position: sticky; top: 56px; z-index: 100;
       overflow-x: auto;
     }
@@ -97,7 +98,7 @@
     .dash-tabs .tab {
       padding: 12px 20px;
       font-size: 14px; font-weight: 500;
-      color: var(--c-text-muted);
+      color: var(--qh-ink-mute);
       cursor: pointer;
       border-bottom: 2px solid transparent;
       transition: color .15s, border-color .15s;
@@ -105,8 +106,8 @@
       text-decoration: none;
       background: none; border-top: none; border-left: none; border-right: none;
     }
-    .dash-tabs .tab:hover { color: var(--c-text); }
-    .dash-tabs .tab.active { color: var(--c-green); border-bottom-color: var(--c-green); font-weight: 600; }
+    .dash-tabs .tab:hover { color: var(--qh-ink); }
+    .dash-tabs .tab.active { color: var(--qh-green); border-bottom-color: var(--qh-green); font-weight: 600; }
 
     /* ---- 视图 = display none / block ---- */
     .dash-view { display: none; padding: 24px; }
@@ -123,36 +124,36 @@
       .dash-stat-row { grid-template-columns: repeat(2, 1fr); }
     }
     .dash-stat-card {
-      background: var(--c-bg-card);
-      border: 1px solid var(--c-border);
-      border-radius: var(--r-lg);
+      background: var(--qh-surface);
+      border: 1px solid var(--qh-line);
+      border-radius: var(--qh-radius-lg);
       padding: 20px 24px;
       display: flex; flex-direction: column;
       justify-content: center;
-      box-shadow: var(--shadow-sm);
+      box-shadow: var(--qh-shadow-sm);
       transition: box-shadow .2s;
     }
-    .dash-stat-card:hover { box-shadow: var(--shadow-md); }
+    .dash-stat-card:hover { box-shadow: var(--qh-shadow-md); }
     .dash-stat-card .stat-label {
-      font-size: 13px; color: var(--c-text-muted);
+      font-size: 13px; color: var(--qh-ink-mute);
       margin-bottom: 8px;
     }
     .dash-stat-card .stat-value {
       font-size: 28px; font-weight: 800;
-      color: var(--c-primary);
+      color: var(--qh-accent);
       font-feature-settings: "tnum";
       line-height: 1.2;
     }
-    .stat-value.c-green  { color: var(--c-green); }
-    .stat-value.c-amber  { color: var(--c-amber); }
-    .stat-value.c-red    { color: var(--c-red); }
-    .stat-value.c-blue   { color: var(--c-blue); }
+    .stat-value.c-green  { color: var(--qh-green); }
+    .stat-value.c-amber  { color: var(--qh-warning); }
+    .stat-value.c-red    { color: var(--qh-danger); }
+    .stat-value.c-blue   { color: var(--qh-info); }
     .dash-stat-card .stat-sub {
-      font-size: 12px; color: var(--c-text-muted);
+      font-size: 12px; color: var(--qh-ink-mute);
       margin-top: 4px;
     }
-    .stat-sub.up   { color: var(--c-green); font-weight: 600; }
-    .stat-sub.down { color: var(--c-red);   font-weight: 600; }
+    .stat-sub.up   { color: var(--qh-green); font-weight: 600; }
+    .stat-sub.down { color: var(--qh-danger);   font-weight: 600; }
 
     /* ---- Chart 容器 ---- */
     .chart-grid {
@@ -161,15 +162,15 @@
       gap: 16px;
     }
     .chart-card {
-      background: var(--c-bg-card);
-      border: 1px solid var(--c-border);
-      border-radius: var(--r-lg);
+      background: var(--qh-surface);
+      border: 1px solid var(--qh-line);
+      border-radius: var(--qh-radius-lg);
       padding: 20px 24px;
-      box-shadow: var(--shadow-sm);
+      box-shadow: var(--qh-shadow-sm);
     }
     .chart-card h4 {
       font-size: 14px; font-weight: 600;
-      color: var(--c-text-secondary);
+      color: var(--qh-ink-soft);
       margin-bottom: 16px;
     }
     .chart-card .chart-box { height: 280px; position: relative; }
@@ -179,23 +180,23 @@
     .dash-table { width: 100%; border-collapse: collapse; font-size: 13px; }
     .dash-table th {
       padding: 10px 14px; text-align: left;
-      background: var(--c-bg); border-bottom: 1px solid var(--c-border);
-      font-weight: 600; color: var(--c-text-muted); font-size: 12px;
+      background: var(--qh-bg); border-bottom: 1px solid var(--qh-line);
+      font-weight: 600; color: var(--qh-ink-mute); font-size: 12px;
     }
-    .dash-table td { padding: 10px 14px; border-bottom: 1px solid var(--c-border-light); }
-    .dash-table tr:hover td { background: var(--c-bg-hover); }
+    .dash-table td { padding: 10px 14px; border-bottom: 1px solid var(--qh-line-soft); }
+    .dash-table tr:hover td { background: var(--qh-surface-hover); }
 
     /* ---- Loading ---- */
     .dash-loading {
       display: flex; flex-direction: column;
       align-items: center; justify-content: center;
-      height: 200px; color: var(--c-text-muted);
+      height: 200px; color: var(--qh-ink-mute);
       font-size: 14px; gap: 12px;
     }
     .dash-loading .spinner {
       width: 28px; height: 28px;
-      border: 3px solid var(--c-border);
-      border-top-color: var(--c-green);
+      border: 3px solid var(--qh-line);
+      border-top-color: var(--qh-green);
       border-radius: 50%;
       animation: dashSpin .7s linear infinite;
     }
@@ -204,16 +205,16 @@
     /* ---- 空状态 ---- */
     .dash-empty {
       display: flex; align-items: center; justify-content: center;
-      height: 200px; color: var(--c-text-muted); font-size: 14px;
+      height: 200px; color: var(--qh-ink-mute); font-size: 14px;
     }
 
     /* ---- 底部 ---- */
     .dash-footer {
       height: 40px;
       display: flex; align-items: center; justify-content: center;
-      font-size: 12px; color: var(--c-text-muted);
-      background: var(--c-bg-card);
-      border-top: 1px solid var(--c-border);
+      font-size: 12px; color: var(--qh-ink-mute);
+      background: var(--qh-surface);
+      border-top: 1px solid var(--qh-line);
       margin-top: auto;
     }
 
@@ -223,11 +224,11 @@
       gap: 16px;
     }
     .chain-card {
-      background: var(--c-bg-card);
-      border: 1px solid var(--c-border);
-      border-radius: var(--r-lg);
+      background: var(--qh-surface);
+      border: 1px solid var(--qh-line);
+      border-radius: var(--qh-radius-lg);
       padding: 20px;
-      box-shadow: var(--shadow-sm);
+      box-shadow: var(--qh-shadow-sm);
     }
     .chain-card h5 {
       font-size: 15px; font-weight: 600;
@@ -235,17 +236,17 @@
     }
     .chain-card .cc-row {
       display: flex; justify-content: space-between;
-      font-size: 13px; color: var(--c-text-secondary);
+      font-size: 13px; color: var(--qh-ink-soft);
       padding: 4px 0;
     }
-    .chain-card .cc-row .val { font-weight: 600; color: var(--c-text); }
+    .chain-card .cc-row .val { font-weight: 600; color: var(--qh-ink); }
 
     /* ============ Dashboard focus-visible 样式 ============ */
     .dash-tabs .tab:focus-visible,
     .dh-date-tabs button:focus-visible,
     .btn-refresh:focus-visible {
       outline: none;
-      box-shadow: 0 0 0 2px var(--c-green);
+      box-shadow: 0 0 0 2px var(--qh-green);
       border-radius: 6px;
     }
 
@@ -386,16 +387,16 @@
 
   /* ---------- 取 CSS 变量作为 Chart 配色 ---------- */
   var styles    = getComputedStyle(document.documentElement);
-  var C_GREEN   = styles.getPropertyValue('--c-green').trim()   || '#10B981';
-  var C_AMBER   = styles.getPropertyValue('--c-amber').trim()   || '#F59E0B';
-  var C_BLUE    = styles.getPropertyValue('--c-blue').trim()    || '#3B82F6';
-  var C_RED     = styles.getPropertyValue('--c-red').trim()     || '#EF4444';
-  var C_PRIMARY = styles.getPropertyValue('--c-primary').trim() || '#0F172A';
-  var C_MUTED   = styles.getPropertyValue('--c-text-muted').trim() || '#94A3B8';
-  var C_BORDER  = styles.getPropertyValue('--c-border').trim()   || '#E2E8F0';
+  var C_GREEN   = styles.getPropertyValue('--qh-green').trim()   || '#10B981';
+  var C_AMBER   = styles.getPropertyValue('--qh-warning').trim()   || '#F59E0B';
+  var C_BLUE    = styles.getPropertyValue('--qh-info').trim()    || '#3B82F6';
+  var C_RED     = styles.getPropertyValue('--qh-danger').trim()     || '#EF4444';
+  var C_PRIMARY = styles.getPropertyValue('--qh-accent').trim() || '#0F172A';
+  var C_MUTED   = styles.getPropertyValue('--qh-ink-mute').trim() || '#94A3B8';
+  var C_BORDER  = styles.getPropertyValue('--qh-line').trim()   || '#E2E8F0';
 
   /* 全局 Chart 默认 */
-  Chart.defaults.font.family = styles.getPropertyValue('--font').trim();
+  Chart.defaults.font.family = styles.getPropertyValue('--qh-font-sans').trim();
   Chart.defaults.font.size = 12;
   Chart.defaults.plugins.legend.display = false;
   Chart.defaults.plugins.tooltip.titleFont = { size: 12 };
@@ -771,7 +772,7 @@
               + '</tr>';
       });
       if (topList.length === 0) {
-        html += '<tr><td colspan="5" style="text-align:center;color:var(--c-text-muted)">暂无数据</td></tr>';
+        html += '<tr><td colspan="5" style="text-align:center;color:var(--qh-ink-mute)">暂无数据</td></tr>';
       }
       html += '</tbody></table>';
       document.getElementById('member-top-table').innerHTML = html;

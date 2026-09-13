@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>柒号收银 — 智能收银管理系统</title>
+  <link rel="stylesheet" href="/static/css/tokens-merged.css">
   <link rel="stylesheet" href="/static/css/app.css">
   <link rel="stylesheet" href="/static/css/pages.css">
-  <link rel="stylesheet" href="/static/css/brand.css">
   <link rel="stylesheet" href="/static/css/ui-upgrade.css">
   <link rel="stylesheet" href="/static/css/toast.css">
   <link rel="stylesheet" href="/static/css/motion.css">
@@ -70,7 +70,7 @@
     <div class="user">
       <span class="dot"></span>
       <span id="topbar-user"></span>
-      <a href="/dashboard" style="color:var(--c-green);font-size:12px;margin-left:8px;">看板</a>
+      <a href="/dashboard" style="color:var(--qh-green);font-size:12px;margin-left:8px;">看板</a>
       <span style="cursor:pointer;font-size:12px;color:rgba(255,255,255,.5);margin-left:8px;" onclick="App.logout()">退出</span>
     </div>
   </div>
@@ -85,7 +85,7 @@
       <div class="pos-cart">
         <div class="cart-header">
           <span>🛒 购物车</span>
-          <span id="cart-count" style="font-size:13px;color:var(--c-text-muted)">0 件</span>
+          <span id="cart-count" style="font-size:13px;color:var(--qh-ink-mute)">0 件</span>
         </div>
         <div class="cart-items" id="cart-items"></div>
         <div class="cart-empty" id="cart-empty" style="display:flex;">
@@ -110,9 +110,9 @@
         <div class="search-bar">
           <input class="input" id="pos-search" type="text" placeholder="🔍 搜索商品名称或扫描条码…" oninput="POS.handleSearch(this.value)" onkeydown="if(event.key==='Enter')POS.handleSearch(this.value)">
           <button class="btn-scan" id="pos-scan-btn" onclick="BarcodeScanner.toggle()">📷 扫码</button>
-          <div id="selected-table-badge" style="display:none;align-items:center;gap:6px;padding:6px 14px;background:var(--c-blue-bg);color:var(--c-blue-text);border-radius:8px;font-size:13px;font-weight:600;">
+          <div id="selected-table-badge" style="display:none;align-items:center;gap:6px;padding:6px 14px;background:var(--qh-info-bg);color:var(--qh-info-text);border-radius:8px;font-size:13px;font-weight:600;">
             <span id="selected-table-label"></span>
-            <button onclick="POS.clearTableSelection()" style="font-size:14px;color:var(--c-red);background:none;border:none;cursor:pointer;">×</button>
+            <button onclick="POS.clearTableSelection()" style="font-size:14px;color:var(--qh-danger);background:none;border:none;cursor:pointer;">×</button>
           </div>
         </div>
         <div class="product-grid" id="product-grid"></div>
@@ -127,7 +127,7 @@
         <button class="btn btn-green" onclick="TablesModule.createNew()">＋ 新建桌台</button>
         <button class="btn btn-outline" id="layout-toggle-btn" onclick="TablesModule.toggleLayout()">布局编辑</button>
         <button class="btn btn-outline" style="margin-left:8px;font-size:12px;" onclick="notify.banner('当前共有 '+TablesModule.activeCount+' 张使用中桌台', {type:'info'})">📊 统计</button>
-        <div style="margin-left:auto;display:flex;gap:8px;font-size:12px;color:var(--c-text-muted);align-items:center;">
+        <div style="margin-left:auto;display:flex;gap:8px;font-size:12px;color:var(--qh-ink-mute);align-items:center;">
           <span class="table-legend"><span class="legend-dot" style="background:#94A3B8"></span>空闲</span>
           <span class="table-legend"><span class="legend-dot" style="background:#F59E0B"></span>就餐中</span>
           <span class="table-legend"><span class="legend-dot" style="background:#3B82F6"></span>已预留</span>
@@ -146,9 +146,9 @@
   <div id="page-member" class="page">
     <div class="member-shell">
       <div class="member-list-col">
-        <div style="padding:14px 18px;border-bottom:1px solid var(--c-border);display:flex;align-items:center;gap:8px;">
+        <div style="padding:14px 18px;border-bottom:1px solid var(--qh-line);display:flex;align-items:center;gap:8px;">
           <span style="font-weight:600;font-size:15px;">会员列表</span>
-          <span id="member-count" style="font-size:12px;color:var(--c-text-muted);"></span>
+          <span id="member-count" style="font-size:12px;color:var(--qh-ink-mute);"></span>
         </div>
         <div class="member-search-box">
           <input class="input" type="text" placeholder="🔍 搜索手机号或姓名…">
@@ -158,7 +158,7 @@
       <div class="member-detail-col">
         <div style="text-align:center;">
           <div style="font-size:48px;opacity:0.4;margin-bottom:12px;">👤</div>
-          <div style="font-size:16px;color:var(--c-text-muted);">选择左侧会员查看详情</div>
+          <div style="font-size:16px;color:var(--qh-ink-mute);">选择左侧会员查看详情</div>
         </div>
       </div>
     </div>
@@ -169,7 +169,7 @@
     <div class="hw-shell">
       <div style="margin-bottom:20px;">
         <h2 style="font-size:18px;font-weight:700;margin-bottom:4px;">外设管理</h2>
-        <p style="font-size:13px;color:var(--c-text-muted);">管理 POS 硬件设备连接状态</p>
+        <p style="font-size:13px;color:var(--qh-ink-mute);">管理 POS 硬件设备连接状态</p>
       </div>
       <div class="hw-grid" id="hw-grid"></div>
     </div>
@@ -197,7 +197,7 @@
           <div class="label">同比昨日</div>
         </div>
       </div>
-      <div class="report-card card" style="padding:24px;text-align:center;color:var(--c-text-muted);">
+      <div class="report-card card" style="padding:24px;text-align:center;color:var(--qh-ink-mute);">
         <div style="font-size:36px;margin-bottom:8px;">📊</div>
         <div>更多报表功能敬请期待</div>
       </div>
@@ -211,7 +211,7 @@
         <div id="category-list" style="padding:4px 0;">
           <div class="cat-item active" data-cat=""><span>📦 全部</span></div>
         </div>
-        <div style="padding:8px;margin-top:8px;border-top:1px solid var(--c-border-light);">
+        <div style="padding:8px;margin-top:8px;border-top:1px solid var(--qh-line-soft);">
           <button class="btn btn-outline" style="width:100%;font-size:12px" onclick="ProductManage.addCategory()">＋ 新建分类</button>
         </div>
       </div>
@@ -219,7 +219,7 @@
         <div class="toolbar">
           <input class="input" id="product-search" placeholder="🔍 搜索商品编号或名称…" oninput="ProductManage.search(this.value)">
           <button class="btn btn-green" onclick="ProductManage.openAddModal()">＋ 新建商品</button>
-          <button class="btn btn-outline" style="font-size:12px;color:var(--c-text-muted)" onclick="notify.info('批量功能暂仅支持上架/下架操作')">批量操作</button>
+          <button class="btn btn-outline" style="font-size:12px;color:var(--qh-ink-mute)" onclick="notify.info('批量功能暂仅支持上架/下架操作')">批量操作</button>
         </div>
         <div class="product-table-wrap">
           <table class="data-table" id="product-data-table">

@@ -30,11 +30,11 @@
   align-items: center;
   gap: 10px;
   padding: 12px 16px;
-  border-radius: var(--radius-lg, 12px);
-  background: var(--glass-bg-white, rgba(255,255,255,0.95));
+  border-radius: var(--qh-radius-lg, 12px);
+  background: var(--qh-surface, rgba(255,255,255,0.95));
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  box-shadow: var(--shadow-lg, 0 10px 30px rgba(0,0,0,0.1));
+  box-shadow: var(--qh-shadow-lg, 0 10px 30px rgba(0,0,0,0.1));
   min-width: 280px;
   max-width: 380px;
   border-left: 4px solid transparent;
@@ -42,14 +42,14 @@
 
 .notify-icon {
   flex-shrink: 0;
-  color: var(--color-info, #3b82f6);
+  color: var(--qh-info, #3b82f6);
 }
 
 .notify-msg {
   flex: 1;
   font-size: 14px;
   line-height: 1.4;
-  color: var(--text-primary, #1f2937);
+  color: var(--qh-ink, #1f2937);
   word-break: break-word;
 }
 
@@ -57,41 +57,41 @@
   background: none;
   border: none;
   font-size: 18px;
-  color: var(--text-tertiary, #9ca3af);
+  color: var(--qh-ink-mute, #9ca3af);
   cursor: pointer;
   padding: 0 4px;
 }
 .notify-close:hover {
-  color: var(--text-primary, #1f2937);
+  color: var(--qh-ink, #1f2937);
 }
 
 /* 语义色变体 */
 .notify-success {
-  border-left-color: var(--color-success, #10b981);
+  border-left-color: var(--qh-success, #10b981);
 }
 .notify-success .notify-icon {
-  color: var(--color-success, #10b981);
+  color: var(--qh-success, #10b981);
 }
 
 .notify-error {
-  border-left-color: var(--color-danger, #ef4444);
+  border-left-color: var(--qh-danger, #ef4444);
 }
 .notify-error .notify-icon {
-  color: var(--color-danger, #ef4444);
+  color: var(--qh-danger, #ef4444);
 }
 
 .notify-warn {
-  border-left-color: var(--color-warning, #f59e0b);
+  border-left-color: var(--qh-warning, #f59e0b);
 }
 .notify-warn .notify-icon {
-  color: var(--color-warning, #f59e0b);
+  color: var(--qh-warning, #f59e0b);
 }
 
 .notify-info {
-  border-left-color: var(--color-info, #3b82f6);
+  border-left-color: var(--qh-info, #3b82f6);
 }
 .notify-info .notify-icon {
-  color: var(--color-info, #3b82f6);
+  color: var(--qh-info, #3b82f6);
 }
 
 /* 动作按钮 */
@@ -146,47 +146,47 @@
   justify-content: center;
   gap: 12px;
   padding: 12px 24px;
-  background: var(--glass-bg-white, rgba(255,255,255,0.95));
+  background: var(--qh-surface, rgba(255,255,255,0.95));
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  box-shadow: var(--shadow-md, 0 4px 12px rgba(0,0,0,0.08));
-  border-bottom: 1px solid var(--glass-border, rgba(255,255,255,0.2));
+  box-shadow: var(--qh-shadow-md, 0 4px 12px rgba(0,0,0,0.08));
+  border-bottom: 1px solid var(--qh-glass-border, rgba(255,255,255,0.2));
 }
 
 .notify-banner-msg {
   flex: 1;
   text-align: center;
   font-size: 14px;
-  color: var(--text-primary, #1f2937);
+  color: var(--qh-ink, #1f2937);
 }
 
 .notify-banner-close {
   background: none;
   border: none;
   font-size: 18px;
-  color: var(--text-tertiary, #9ca3af);
+  color: var(--qh-ink-mute, #9ca3af);
   cursor: pointer;
 }
 .notify-banner-close:hover {
-  color: var(--text-primary, #1f2937);
+  color: var(--qh-ink, #1f2937);
 }
 
 /* Banner 语义色变体 */
 .notify-banner.notify-success {
-  background: var(--glass-success, rgba(16, 185, 129, 0.1));
-  border-bottom-color: var(--color-success, #10b981);
+  background: var(var(--qh-success-bg), rgba(16, 185, 129, 0.1));
+  border-bottom-color: var(--qh-success, #10b981);
 }
 .notify-banner.notify-error {
-  background: var(--glass-danger, rgba(239, 68, 68, 0.1));
-  border-bottom-color: var(--color-danger, #ef4444);
+  background: var(var(--qh-danger-bg), rgba(239, 68, 68, 0.1));
+  border-bottom-color: var(--qh-danger, #ef4444);
 }
 .notify-banner.notify-warn {
-  background: var(--glass-warning, rgba(245, 158, 11, 0.1));
-  border-bottom-color: var(--color-warning, #f59e0b);
+  background: var(var(--qh-warning-bg), rgba(245, 158, 11, 0.1));
+  border-bottom-color: var(--qh-warning, #f59e0b);
 }
 .notify-banner.notify-info {
-  background: var(--glass-info, rgba(59, 130, 246, 0.1));
-  border-bottom-color: var(--color-info, #3b82f6);
+  background: var(var(--qh-info-bg), rgba(59, 130, 246, 0.1));
+  border-bottom-color: var(--qh-info, #3b82f6);
 }
 
 /* Banner 入场动效 */
@@ -230,10 +230,10 @@
   gap: 10px;
   padding: 8px 12px;
   border-radius: var(--radius-md, 8px);
-  background: var(--glass-bg-white, rgba(255,255,255,0.95));
+  background: var(--qh-surface, rgba(255,255,255,0.95));
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  box-shadow: var(--shadow-md, 0 4px 12px rgba(0,0,0,0.08));
+  box-shadow: var(--qh-shadow-md, 0 4px 12px rgba(0,0,0,0.08));
   border-left: 4px solid var(--qh-primary, #0ea5e9);
   z-index: 100;
 }
@@ -241,7 +241,7 @@
 .notify-suggest-msg {
   flex: 1;
   font-size: 13px;
-  color: var(--text-secondary, #4b5563);
+  color: var(--qh-ink-soft, #4b5563);
 }
 
 /* Suggest 入场动效 */
@@ -295,11 +295,11 @@
 }
 
 .qh-modal-box {
-  background: var(--glass-bg-white, rgba(255,255,255,0.98));
+  background: var(--qh-surface, rgba(255,255,255,0.98));
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border-radius: var(--radius-xl, 16px);
-  box-shadow: var(--shadow-xl, 0 20px 40px rgba(0,0,0,0.12));
+  box-shadow: var(--qh-shadow-xl, 0 20px 40px rgba(0,0,0,0.12));
   padding: 24px;
   min-width: 320px;
   max-width: 480px;
@@ -313,13 +313,13 @@
 .qh-modal-title {
   font-size: 16px;
   font-weight: 600;
-  color: var(--text-primary, #1f2937);
+  color: var(--qh-ink, #1f2937);
   margin-bottom: 8px;
 }
 
 .qh-modal-msg {
   font-size: 14px;
-  color: var(--text-secondary, #4b5563);
+  color: var(--qh-ink-soft, #4b5563);
   line-height: 1.5;
   margin-bottom: 16px;
 }
@@ -337,7 +337,7 @@
 
 /* 危险按钮动效 */
 .btn-danger {
-  background: var(--color-danger, #ef4444);
+  background: var(--qh-danger, #ef4444);
   color: white;
   transition: transform var(--dur-fast, 200ms) var(--ease-standard, cubic-bezier(0.4, 0, 0.2, 1));
 }
