@@ -23,6 +23,10 @@ class CheckoutRequest(BaseModel):
     member_id: str = ""
     cash_amount: int = 0  # 现金实付（分）
     idempotency_key: str = ""
+    table_id: str = ""
+    table_name: str = ""
+    spec_text: str = ""
+    coupon_code: str = ""
 
 
 class SuspendRequest(BaseModel):
@@ -49,6 +53,10 @@ async def checkout(request: Request, data: CheckoutRequest):
             member_id=data.member_id,
             cash_amount=data.cash_amount,
             idempotency_key=data.idempotency_key,
+            table_id=data.table_id,
+            table_name=data.table_name,
+            spec_text=data.spec_text,
+            coupon_code=data.coupon_code,
         )
 
         order = result["order"]

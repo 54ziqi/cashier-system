@@ -29,8 +29,14 @@ from fastapi.security import HTTPBearer
 from sqlalchemy.orm import Session
 
 from .auth import ensure_pubkey_on_startup, verify_digest
-from .models import TenantRegistry, init_db
-from .service import aggregate_chain, aggregate_single, ingest_digest, list_chain_stores
+from .models import PolicyPush, TenantRegistry, init_db
+from .service import (
+    aggregate_chain,
+    aggregate_single,
+    ingest_digest,
+    list_chain_stores,
+    record_policy_push,
+)
 
 log = logging.getLogger("cloud")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -295,6 +301,146 @@ async def list_tenants(db: Session = Depends(get_db), tok=Depends(require_admin)
         }
         for r in rows
     ]
+
+
+# ── M6 策略下发的集团推送 ─────────────────────────────────────────
+
+
+@app.post("/cloud/v1/policies/menu")
+async def push_menu_policy(
+    parent_id: str,
+    body: dict,
+    db: Session = Depends(get_db),
+    tok=Depends(require_admin),
+):
+    """推送菜单策略到集团旗下所有子店"""
+    targets = [parent_id] + [
+        c.merchant_id
+        for c in db.query(TenantRegistry)
+        .filter_by(parent_merchant_id=parent_id, active=True)
+        .all()
+    ]
+    pushes = []
+    for tid in targets:
+        ver = record_policy_push(db, parent_id, tid, "menu", body)
+        pushes.append({"target_tenant_id": tid, "version": ver})
+    return {"policy_type": "menu", "targets": pushes}
+
+
+@app.post("/cloud/v1/policies/prices")
+async def push_price_policy(
+    parent_id: str,
+    body: dict,
+    db: Session = Depends(get_db),
+    tok=Depends(require_admin),
+):
+    """推送价格策略"""
+    targets = [parent_id] + [
+        c.merchant_id
+        for c in db.query(TenantRegistry)
+        .filter_by(parent_merchant_id=parent_id, active=True)
+        .all()
+    ]
+    pushes = []
+    for tid in targets:
+        ver = record_policy_push(db, parent_id, tid, "prices", body)
+        pushes.append({"target_tenant_id": tid, "version": ver})
+    return {"policy_type": "prices", "targets": pushes}
+
+
+@app.post("/cloud/v1/policies/members")
+async def push_member_policy(
+    parent_id: str,
+    body: dict,
+    db: Session = Depends(get_db),
+    tok=Depends(require_admin),
+):
+    """推送会员策略"""
+    targets = [parent_id] + [
+        c.merchant_id
+        for c in db.query(TenantRegistry)
+        .filter_by(parent_merchant_id=parent_id, active=True)
+        .all()
+    ]
+    pushes = []
+    for tid in targets:
+        ver = record_policy_push(db, parent_id, tid, "members", body)
+        pushes.append({"target_tenant_id": tid, "version": ver})
+    return {"policy_type": "members", "targets": pushes}
+
+
+@app.post("/cloud/v1/policies/promotions")
+async def push_promotion_policy(
+    parent_id: str,
+    body: dict,
+    db: Session = Depends(get_db),
+    tok=Depends(require_admin),
+):
+    """推送促销策略"""
+    targets = [parent_id] + [
+        c.merchant_id
+        for c in db.query(TenantRegistry)
+        .filter_by(parent_merchant_id=parent_id, active=True)
+        .all()
+    ]
+    pushes = []
+    for tid in targets:
+        ver = record_policy_push(db, parent_id, tid, "promotions", body)
+        pushes.append({"target_tenant_id": tid, "version": ver})
+    return {"policy_type": "promotions", "targets": pushes}
+
+
+@app.get("/cloud/v1/policies/{tenant_id}/status")
+async def policy_status(
+    tenant_id: str,
+    db: Session = Depends(get_db),
+    tok=Depends(require_admin),
+):
+    """查询各策略类型的最新版本"""
+    rows = (
+        db.query(PolicyPush)
+        .filter_by(target_tenant_id=tenant_id)
+        .order_by(PolicyPush.push_version.desc())
+        .all()
+    )
+    latest: dict[str, int] = {}
+    for r in rows:
+        if r.policy_type not in latest:
+            latest[r.policy_type] = r.push_version
+    return {"tenant_id": tenant_id, "latest_versions": latest}
+
+
+@app.get("/cloud/v1/policies/{tenant_id}/pull")
+async def policy_pull(
+    tenant_id: str,
+    since: int = 0,
+    db: Session = Depends(get_db),
+    tok=Depends(require_admin),
+):
+    """POS 端拉取 since 版本之后的所有策略推送"""
+    rows = (
+        db.query(PolicyPush)
+        .filter(
+            PolicyPush.target_tenant_id == tenant_id,
+            PolicyPush.push_version > since,
+        )
+        .order_by(PolicyPush.push_version.asc())
+        .all()
+    )
+    return {
+        "tenant_id": tenant_id,
+        "policies": [
+            {
+                "id": r.id,
+                "parent_id": r.parent_tenant_id,
+                "policy_type": r.policy_type,
+                "payload": json.loads(r.payload_json),
+                "version": r.push_version,
+                "created_at": r.created_at.isoformat() if r.created_at else None,
+            }
+            for r in rows
+        ],
+    }
 
 
 # ── WebSocket 鉴权 ──────────────────────────────────────────────────

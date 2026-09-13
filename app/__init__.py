@@ -14,7 +14,22 @@ from fastapi.staticfiles import StaticFiles
 from app.api import auth, health
 from app.api.admin import licenses, tenants
 from app.api.dashboard import router as dashboard_router
-from app.api.merchant import cashier, categories, orders, products
+from app.api.merchant import (
+    cashier,
+    categories,
+    finance,
+    inventory,
+    kds,
+    membership,
+    orders,
+    policy,
+    products,
+    promotions,
+    tables,
+)
+from app.api.merchant import (
+    print as print_api,
+)
 from app.config import Settings, load_settings
 from app.lifespan import lifespan
 
@@ -64,6 +79,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         cashier.router
     )  # includes /api/v1/merchant/members and /checkout
     app.include_router(categories.router)
+    app.include_router(tables.router)  # M1 桌台管理
+    app.include_router(membership.router)  # M2 会员 CRM
+    app.include_router(promotions.router)  # M3 促销规则引擎
+    app.include_router(inventory.router)  # M4 供应链 ERP
+    app.include_router(finance.router)  # M5 财务报表
+    app.include_router(kds.router)  # M5 KDS 厨房制单
+    app.include_router(print_api.router)  # M5 ESC/POS 打印
+    app.include_router(policy.router)  # M6 集团策略/调拨/分账
 
     # Admin APIs
     app.include_router(tenants.router)
@@ -85,6 +108,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         @app.get("/dashboard", response_class=HTMLResponse)
         async def dashboard():
             html = (static_dir / "dashboard.html").read_text(encoding="utf-8")
+            return HTMLResponse(content=html)
+
+        @app.get("/tables", response_class=HTMLResponse)
+        async def tables_page():
+            html = (static_dir / "tables.html").read_text(encoding="utf-8")
             return HTMLResponse(content=html)
 
     return app

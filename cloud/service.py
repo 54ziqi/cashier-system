@@ -7,12 +7,14 @@ store_name 第一次 ingest 后锁定不再变更。
 
 from __future__ import annotations
 
+import json as _json
+import uuid
 from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 
-from .models import DailyDigest, StoreRelation, TenantRegistry
+from .models import DailyDigest, PolicyPush, StoreRelation, TenantRegistry
 
 
 def _utcnow() -> datetime:
@@ -173,3 +175,34 @@ def list_chain_stores(session, parent_id: str) -> list:
         }
         for c in children
     ]
+
+
+# ── M6 策略推送记录 ─────────────────────────────────────────────────
+
+
+def record_policy_push(
+    session,
+    parent_tenant_id: str,
+    target_tenant_id: str,
+    policy_type: str,
+    payload: dict,
+) -> int:
+    """记录一次策略推送并返回 push_version"""
+    # 当前最大版本号 +1
+    max_ver = (
+        session.query(func.coalesce(func.max(PolicyPush.push_version), 0))
+        .filter_by(target_tenant_id=target_tenant_id, policy_type=policy_type)
+        .scalar()
+        or 0
+    )
+    push = PolicyPush(
+        id=uuid.uuid4().hex,
+        parent_tenant_id=parent_tenant_id,
+        target_tenant_id=target_tenant_id,
+        policy_type=policy_type,
+        payload_json=_json.dumps(payload, ensure_ascii=False),
+        push_version=max_ver + 1,
+    )
+    session.add(push)
+    session.commit()
+    return push.push_version

@@ -265,50 +265,6 @@ ul { list-style: none; }
 }
 .input::placeholder { color: var(--c-text-muted); }
 
-/* ============ Toast ============ */
-#toast-container {
-  position: fixed;
-  top: 16px;
-  right: 16px;
-  z-index: 10000;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  pointer-events: none;
-}
-.toast {
-  min-width: 280px;
-  max-width: 400px;
-  padding: 12px 18px;
-  border-radius: var(--r-md);
-  color: #fff;
-  font-size: 14px;
-  font-weight: 500;
-  box-shadow: var(--shadow-lg);
-  display: flex;
-  align-items: center;
-  gap: var(--sp-3);
-  pointer-events: auto;
-  animation: toast-in .3s ease;
-  cursor: pointer;
-}
-.toast.closing { animation: toast-out .3s ease forwards; }
-.toast.success { background: var(--c-green); }
-.toast.error { background: var(--c-red); }
-.toast.info { background: var(--c-blue); }
-.toast.warning { background: #D97706; }
-.toast .icon { font-size: 18px; flex-shrink: 0; }
-.toast .close { margin-left: auto; opacity: .7; font-size: 16px; }
-.toast .close:hover { opacity: 1; }
-@keyframes toast-in {
-  from { opacity: 0; transform: translateX(40px); }
-  to { opacity: 1; transform: translateX(0); }
-}
-@keyframes toast-out {
-  from { opacity: 1; transform: translateX(0); }
-  to { opacity: 0; transform: translateX(40px); }
-}
-
 /* ============ 登录页 ============ */
 .login-wrap {
   height: 100vh;
@@ -399,3 +355,5 @@ ul { list-style: none; }
   font-size: 12px;
   color: var(--c-text-muted);
 }
+
+/* ============ Toast 样式 — 由 toast.css 统一提供（app.css 不重复定义） ============ */

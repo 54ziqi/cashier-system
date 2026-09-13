@@ -36,6 +36,9 @@
       POS.onShow();
       BarcodeScanner.init();
     }
+    if (pageId === 'tables') {
+      TablesModule.onShow();
+    }
     if (pageId === 'member') Member.onShow();
     if (pageId === 'report') Report.onShow();
     if (pageId === 'hw') HW.onShow();

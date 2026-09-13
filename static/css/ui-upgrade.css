@@ -8,6 +8,9 @@
      10. 表格行 slide-in 错峰入场
      11. 弹窗 / 抽屉 3D 翻转入场
      12. prefers-reduced-motion 扩展覆盖
+     13. 自定义 confirm / prompt 弹窗组件
+     14. 桌台 flip 动画 + 响应式断点
+     15. 结账成功 confetti / checkmark 动效
    ========================================================================== */
 
 /* ============ 原有 v1 内容（保留） ============ */
@@ -98,13 +101,14 @@
   transition: all var(--qh-dur-fast, 0.15s) ease !important;
 }
 .cart-item:hover  { background: var(--c-green-glass) !important; transform: translateX(4px) !important; box-shadow: var(--shadow-sm); }
-.data-table tr:hover { background: var(--c-green-glass) !important; transform: translateX(2px) !important; }
+.data-table tr:hover { background: var(--c-green-glass) !important; }
 .cat-item:hover { background: var(--c-green-bg) !important; transform: translateX(2px) !important; }
 
-/* ============ 4. 无障碍 ============ */
+/* ============ 4. 无障碍 — focus-visible 统一（修复双层 outline 冲突） ============ */
 button:focus-visible, a:focus-visible, input:focus-visible,
 select:focus-visible, textarea:focus-visible,
-.product-card:focus-visible, .pay-method:focus-visible {
+.product-card:focus-visible, .pay-method:focus-visible,
+.table-card:focus-visible, .spec-option-btn:focus-visible {
   outline: none;
   box-shadow: 0 0 0 2px var(--c-green) !important;
   border-radius: var(--r-sm);
@@ -162,12 +166,12 @@ select:focus-visible, textarea:focus-visible,
   animation: kpiRise .5s var(--qh-ease-ease-out) backwards;
   animation-delay: calc(var(--kpi-index, 0) * 0.06s);
 }
-/* 渐变边框 — 用 border-image 替代 ::before 遮罩，避免多层伪元素 */
+/* 渐变边框 */
 .kpi-card::before {
   content: '';
   position: absolute; inset: 0;
   border-radius: inherit;
-  padding: 1.5px;                                  /* 边框厚度 */
+  padding: 1.5px;
   background: linear-gradient(135deg, var(--c-green) 0%, var(--c-blue) 100%);
   -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
           mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
@@ -176,7 +180,6 @@ select:focus-visible, textarea:focus-visible,
   pointer-events: none;
   opacity: .8;
 }
-/* 当日销售额 卡片 → 更强调 */
 .kpi-card[data-topic="sales"]::before {
   background: linear-gradient(135deg, #10B981 0%, #059669 100%);
 }
@@ -196,7 +199,6 @@ select:focus-visible, textarea:focus-visible,
   letter-spacing:  -.5px;
   font-variant-numeric: tabular-nums;
 }
-/* 数字滚动 — 通过 @property + transition 实现从 0 到目标值 */
 @property --kpi-target {
   syntax: '<number>';
   initial-value: 0;
@@ -234,7 +236,6 @@ select:focus-visible, textarea:focus-visible,
 .empty-state .empty-illust {
   width: 160px;
   height: 120px;
-  /* SVG data URI：一只简洁的方框 + 折线 — 暗示"暂无数据"，无 extra 资源 */
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 160 120' fill='none'><rect x='20' y='30' width='120' height='70' rx='8' stroke='%2394A3B8' stroke-width='2.5' stroke-dasharray='6 4'/><line x1='20' y1='30' x2='70' y2='58' stroke='%2394A3B8' stroke-width='2' stroke-dasharray='3 3'/><polyline points='50,75 75,55 100,70 140,45' stroke='%2310B981' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' opacity='0.5'/><circle cx='130' cy='22' r='10' stroke='%23F59E0B' stroke-width='2' stroke-dasharray='3 3'/><text x='80' y='110' text-anchor='middle' fill='%2394A3B8' font-size='11' font-family='sans-serif'>暂无数据</text></svg>");
   background-repeat: no-repeat;
   background-position: center;
@@ -319,5 +320,196 @@ select:focus-visible, textarea:focus-visible,
   .modal, .drawer, .sheet {
     opacity: 1 !important;
     transform: none !important;
+  }
+}
+
+/* ============ 13. 自定义 confirm / prompt 弹窗组件 ============ */
+.qh-confirm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(8px);
+  opacity: 0;
+  transition: opacity var(--qh-dur-sm, .25s) var(--qh-ease-standard, ease);
+}
+.qh-confirm-overlay.visible { opacity: 1; }
+
+.qh-confirm-box {
+  background: var(--qh-surface, #fff);
+  border: 1px solid var(--qh-surface-line, rgba(255,255,255,.15));
+  border-radius: var(--qh-r-xl, 24px);
+  padding: var(--qh-g6, 24px);
+  min-width: 320px;
+  max-width: 420px;
+  width: 90vw;
+  box-shadow: var(--qh-shadow-4);
+  transform: scale(.9);
+  transition: transform var(--qh-dur-sm, .25s) var(--qh-ease-spring, cubic-bezier(.34,1.56,.64,1));
+  text-align: center;
+}
+.qh-confirm-overlay.visible .qh-confirm-box { transform: scale(1); }
+
+.qh-confirm-msg {
+  font-size: var(--qh-fs-body, 14px);
+  color: var(--qh-ink, #0F172A);
+  line-height: 1.6;
+  margin-bottom: var(--qh-g6, 24px);
+  text-align: center;
+}
+.qh-confirm-box label.qh-confirm-msg {
+  display: block;
+  text-align: left;
+  font-weight: 500;
+}
+
+.qh-confirm-btns {
+  display: flex;
+  gap: var(--qh-g3, 12px);
+}
+.qh-confirm-btns .btn { flex: 1; }
+.qh-confirm-btns .btn:focus-visible {
+  box-shadow: 0 0 0 2px var(--c-green);
+  outline: none;
+}
+
+.qh-prompt-input {
+  text-align: left;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .qh-confirm-overlay { transition: none; }
+  .qh-confirm-box { transition: none; transform: scale(1); }
+}
+
+/* ============ 14. 桌台 flip 动画 + 响应式断点 ============ */
+/* 状态切换 flip 动画 */
+.table-card.status-flip {
+  animation: tableFlip .5s var(--qh-ease-standard);
+}
+@keyframes tableFlip {
+  0%   { transform: rotateY(0); }
+  50%  { transform: rotateY(90deg); }
+  100% { transform: rotateY(0); }
+}
+
+/* 1366px 以下桌台地图自适应 */
+@media (max-width: 1366px) {
+  .tables-grid {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)) !important;
+    gap: 12px;
+    padding: 16px;
+  }
+  .table-card {
+    padding: 12px;
+  }
+  .table-card-icon {
+    font-size: 32px;
+  }
+}
+@media (max-width: 1024px) {
+  .tables-grid {
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)) !important;
+    gap: 10px;
+    padding: 12px;
+  }
+  .tables-toolbar {
+    padding: 12px 16px;
+    flex-wrap: wrap;
+  }
+}
+@media (max-width: 768px) {
+  .tables-grid {
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)) !important;
+    gap: 8px;
+    padding: 8px;
+  }
+  .table-card-meta {
+    flex-direction: column;
+    gap: 4px;
+    font-size: 11px;
+  }
+}
+
+/* ============ 15. 结账成功 confetti / checkmark 动效 ============ */
+.qh-checkmark-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  animation: checkmarkFadeOut .4s ease 1.6s forwards;
+}
+@keyframes checkmarkFadeOut {
+  to { opacity: 0; }
+}
+
+.qh-checkmark-circle {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: var(--c-green);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 32px rgba(16, 185, 129, .35);
+  animation: checkmarkPop .5s var(--qh-ease-spring, cubic-bezier(.34,1.56,.64,1));
+}
+@keyframes checkmarkPop {
+  0%   { transform: scale(0); opacity: 0; }
+  60%  { transform: scale(1.15); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.qh-checkmark-svg {
+  width: 44px;
+  height: 44px;
+  stroke: #fff;
+  stroke-width: 4;
+  fill: none;
+  stroke-dasharray: 60;
+  stroke-dashoffset: 60;
+  animation: checkmarkDraw .4s ease .3s forwards;
+}
+@keyframes checkmarkDraw {
+  to { stroke-dashoffset: 0; }
+}
+
+.qh-checkmark-text {
+  margin-top: 20px;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--c-green);
+  text-align: center;
+  animation: checkmarkPop .5s var(--qh-ease-spring, cubic-bezier(.34,1.56,.64,1)) .15s backwards;
+}
+
+.qh-confetti-piece {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  animation: confettiFall var(--qh-dur-md, .4s) ease-out forwards;
+  animation-delay: calc(var(--confetti-index, 0) * 0.08s);
+}
+@keyframes confettiFall {
+  0%   { opacity: 1; transform: translateY(0) rotate(0deg); }
+  100% { opacity: 0; transform: translateY(120px) rotate(720deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .table-card.status-flip,
+  .qh-checkmark-circle,
+  .qh-checkmark-svg,
+  .qh-checkmark-text,
+  .qh-confetti-piece,
+  .qh-checkmark-overlay {
+    animation: none !important;
   }
 }

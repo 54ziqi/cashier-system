@@ -1,9 +1,11 @@
 /**
  * POS 收银台模块
+ * M1 扩展: 规格选择器 / 桌台绑定 / 状态流转 / 小票
  */
 const POS = (() => {
   let products = [];
   let suspendedCart = null;
+  let selectedTable = null; // { id, name, capacity }
 
   async function init() {
     await Product.loadProducts();
@@ -15,7 +17,7 @@ const POS = (() => {
   }
 
   function bindEvents() {
-    // 搜索过滤（输入条码直接查询商品并添加到购物车）
+    // 搜索过滤
     const search = document.getElementById('pos-search');
     if (search) {
       let scanTimer = null;
@@ -24,10 +26,9 @@ const POS = (() => {
         const val = search.value.trim();
         if (!val) { Product.renderProductGrid(products); return; }
 
-        // EAN/UPC 条码标准长度：8 (EAN-8)、12 (UPC-A)、13 (EAN-13)、14 (GTIN-14)
         if (/^\d{8}$|^\d{12,14}$/.test(val)) {
           scanTimer = setTimeout(async () => {
-            if (search.value.trim() !== val) return; // 竞态保护：期间输入已变
+            if (search.value.trim() !== val) return;
             try {
               const product = await API.products.getByBarcode(val);
               if (product && product.id) {
@@ -48,7 +49,6 @@ const POS = (() => {
         if (e.key === 'Enter' && search.value.trim()) {
           if (scanTimer) { clearTimeout(scanTimer); scanTimer = null; }
           const val = search.value.trim();
-          // 条码优先
           if (/^\d{8}$|^\d{12,14}$/.test(val)) {
             API.products.getByBarcode(val).then(product => {
               if (product && product.id) {
@@ -58,7 +58,6 @@ const POS = (() => {
               search.value = '';
               Product.renderProductGrid(products);
             }).catch(() => {
-              // fallback: 普通搜索第一个
               Product.searchProducts(val).then(() => {
                 if (POS.products.length > 0) {
                   addToCart(POS.products[0]);
@@ -80,7 +79,7 @@ const POS = (() => {
       });
     }
 
-    // 扫码按钮 → 打开扫码弹窗
+    // 扫码按钮
     const scanBtn = document.getElementById('pos-scan-btn');
     if (scanBtn) {
       scanBtn.addEventListener('click', () => BarcodeScanner.toggle());
@@ -91,10 +90,10 @@ const POS = (() => {
     if (checkout) checkout.addEventListener('click', openCheckout);
     // 挂单
     const suspend = document.getElementById('btn-suspend');
-    if (suspend) suspend.addEventListener('click', suspendCart);
+    if (suspend) suspend.addEventListener('click', suspendCartFn);
     // 取单
     const resume = document.getElementById('btn-resume');
-    if (resume) resume.addEventListener('click', resumeCart);
+    if (resume) resume.addEventListener('click', resumeCartFn);
     // 清空
     const clear = document.getElementById('btn-clear');
     if (clear) clear.addEventListener('click', clearCart);
@@ -116,10 +115,14 @@ const POS = (() => {
     }
   }
 
-  function addToCart(product) {
-    // 称重商品需先获取重量
+  /**
+   * 加入购物车 — M1 规格感知
+   * 如果商品有规格组，先弹出规格选择器
+   */
+  async function addToCart(product) {
+    // 称重商品需先获取重量 (业务流程必需 — 保留 prompt 语义，使用 qhPrompt)
     if (product.is_weighing) {
-      const input = prompt(`请输入${product.name}重量（${product.unit || '斤'}）：`, '1');
+      const input = await qhPrompt(`请输入${product.name}重量（${product.unit || '斤'}）：`, '1');
       if (!input || isNaN(input) || +input <= 0) {
         Toast.warning('请输入有效重量');
         return;
@@ -136,28 +139,62 @@ const POS = (() => {
         icon: product.icon || '📦',
         weighing: true,
         subtotal: Math.round(priceYuan * qty * 100),
+        spec_text: '',
+        spec_selections: [],
       });
       Toast.success(`已添加: ${product.name} ${qty}${product.unit || '斤'}`);
-    } else {
-      const existing = App.state.cart.find(c => c.product_id === product.id && !c.weighing);
-      if (existing) {
-        existing.qty += 1;
-        existing.subtotal = Math.round(existing.price * existing.qty);
-      } else {
-        App.state.cart.push({
-          id: product.id,
-          product_id: product.id,
-          name: product.name,
-          price: product.price,
-          qty: 1,
-          unit: product.unit || 'pcs',
-          icon: product.icon || '📦',
-          weighing: false,
-          subtotal: product.price,
-        });
-      }
-      Toast.success(`+ ${product.name}`);
+      renderCart();
+      animateCart();
+      return;
     }
+
+    // 检查是否已有相同商品+相同规格已在购物车中（非称重 + 无规格）
+    const priceYuan = product.price_yuan != null ? product.price_yuan : product.price / 100;
+
+    // 尝试获取规格
+    let specResult = null;
+    try {
+      const specs = await API.specs.get(product.id);
+      if (specs && specs.groups && specs.groups.length > 0) {
+        specResult = await SpecModal.open(product);
+        if (specResult === null) return; // 用户取消
+      }
+    } catch (e) {
+      // 没有规格，静默继续
+    }
+
+    // 查找是否已有完全相同的 item (same product_id + same spec_text)
+    const specKey = specResult ? specResult.spec_text : '';
+    const existing = App.state.cart.find(c =>
+      c.product_id === product.id &&
+      !c.weighing &&
+      (c.spec_text || '') === specKey
+    );
+
+    if (existing) {
+      existing.qty += 1;
+      existing.subtotal = Math.round(existing.price * existing.qty);
+    } else {
+      const finalPrice = specResult ? specResult.final_price : product.price;
+      App.state.cart.push({
+        id: product.id + '_' + Date.now() + Math.random().toString(36).slice(2, 6),
+        product_id: product.id,
+        name: product.name,
+        price: finalPrice,
+        qty: 1,
+        unit: product.unit || 'pcs',
+        icon: product.icon || '📦',
+        weighing: false,
+        subtotal: finalPrice,
+        spec_text: specResult ? specResult.spec_text : '',
+        spec_selections: specResult ? specResult.spec_selections : [],
+      });
+    }
+
+    const addMsg = specResult && specResult.spec_text
+      ? `+ ${product.name} (${specResult.spec_text})`
+      : `+ ${product.name}`;
+    Toast.success(addMsg);
     renderCart();
     animateCart();
   }
@@ -239,12 +276,20 @@ const POS = (() => {
       info.className = 'info';
       const name = document.createElement('div');
       name.className = 'name';
-      name.textContent = c.name;  // 安全：纯文本
+      name.textContent = c.name;
       const price = document.createElement('div');
       price.className = 'price';
       price.textContent = '¥' + priceYuan + '/' + c.unit;
       info.appendChild(name);
       info.appendChild(price);
+
+      // 规格文本折行展示
+      if (c.spec_text) {
+        const spec = document.createElement('div');
+        spec.className = 'cart-item-spec';
+        spec.textContent = c.spec_text;
+        info.appendChild(spec);
+      }
 
       const subtotal = document.createElement('div');
       subtotal.className = 'subtotal';
@@ -288,7 +333,26 @@ const POS = (() => {
     setTimeout(() => cartEl.style.backgroundColor = '', 200);
   }
 
-  // 结算弹窗
+  // ==================== 桌台选择 ====================
+
+  function selectTable(table) {
+    selectedTable = table;
+    const badge = document.getElementById('selected-table-badge');
+    const label = document.getElementById('selected-table-label');
+    if (badge && label) {
+      badge.style.display = 'flex';
+      label.textContent = `🪑 ${table.name} (${table.capacity}人)`;
+    }
+  }
+
+  function clearTableSelection() {
+    selectedTable = null;
+    const badge = document.getElementById('selected-table-badge');
+    if (badge) badge.style.display = 'none';
+  }
+
+  // ==================== 结算 ====================
+
   function openCheckout() {
     if (App.state.cart.length === 0) {
       Toast.warning('购物车为空');
@@ -298,6 +362,9 @@ const POS = (() => {
     const modal = document.createElement('div');
     modal.className = 'modal-overlay visible';
     modal.id = 'checkout-modal';
+
+    const tableInfo = selectedTable ? `<div style="padding:8px 16px;background:var(--c-blue-bg);color:var(--c-blue-text);font-size:13px;border-radius:8px;margin-bottom:16px;">🪑 桌台: ${escapeHtml(selectedTable.name)}</div>` : '';
+
     modal.innerHTML = `
       <div class="modal">
         <div class="modal-head">
@@ -305,6 +372,7 @@ const POS = (() => {
           <button class="close" onclick="POS.closeCheckout()">×</button>
         </div>
         <div class="modal-body">
+          ${tableInfo}
           <div class="pay-methods">
             <div class="pay-method" data-pay="cash" onclick="POS.selectPay(this)">
               <div class="icon">💵</div><div class="name">现金</div>
@@ -347,10 +415,10 @@ const POS = (() => {
     const method = selected.dataset.pay;
     const total = getCartTotal();
 
-    // 如果是会员余额支付需输入手机号
+    // 会员余额支付 — 输入手机号 (业务流程必需 — 使用 qhPrompt)
     let memberId = '';
     if (method === 'member_balance') {
-      const phone = prompt('请输入会员手机号：');
+      const phone = await qhPrompt('请输入会员手机号：');
       if (!phone) return;
       try {
         const member = await API.members.searchByPhone(phone);
@@ -365,10 +433,10 @@ const POS = (() => {
       }
     }
 
-    // 现金支付需要输入实付金额
+    // 现金支付 — 输入实付金额 (业务流程必需 — 使用 qhPrompt)
     let cashAmount = 0;
     if (method === 'cash') {
-      const input = prompt('实收金额（元）：', (total / 100 * 1.0).toFixed(0));
+      const input = await qhPrompt('实收金额（元）：', (total / 100).toFixed(0));
       if (!input || isNaN(input)) return;
       cashAmount = Math.round(+input * 100);
       if (cashAmount < total) {
@@ -377,37 +445,146 @@ const POS = (() => {
       }
     }
 
-    const items = App.state.cart.map(c => ({
-      product_id: c.product_id || c.id,
-      quantity: c.qty,
-      weight: c.weighting ? c.qty : 0,
-      discount: 0,
-    }));
+    // 构造 items (M1: 携带 spec_text / spec_selections)
+    const items = App.state.cart.map(c => {
+      const item = {
+        product_id: c.product_id || c.id,
+        quantity: c.qty,
+        weight: c.weighing ? c.qty : 0,
+        discount: 0,
+      };
+      if (c.spec_text) item.spec_text = c.spec_text;
+      if (c.spec_selections && c.spec_selections.length > 0) {
+        item.spec_selections = c.spec_selections;
+      }
+      return item;
+    });
 
     try {
-      const result = await API.cashier.checkout({
+      const checkoutData = {
         items,
         pay_method: method,
         member_id: memberId,
         cash_amount: cashAmount,
-      });
+      };
+
+      // M1: 桌台绑定
+      if (selectedTable) {
+        checkoutData.table_id = selectedTable.id;
+        checkoutData.table_name = selectedTable.name;
+      }
+
+      const result = await API.cashier.checkout(checkoutData);
+
+      // 保存 item 数据用于小票（再清空购物车）
+      const receiptItems = App.state.cart.map(c => ({
+        name: c.name || c.product_id,
+        qty: c.qty,
+        price: c.price,
+        subtotal: c.subtotal,
+        spec_text: c.spec_text || '',
+        unit: c.unit || '',
+      }));
 
       // 清空购物车
       App.state.cart = [];
+      selectedTable = null;
+      clearTableSelection();
       renderCart();
       closeCheckout();
 
-      // 显示结果
-      if (method === 'cash') {
-        Toast.success(`订单 ${result.order_no} 收款成功，找零 ¥${result.change_yuan}`);
-      } else if (method === 'member_balance') {
-        Toast.success(`订单 ${result.order_no} 会员支付成功`);
-        if (result.member_balance != null) {
-          setTimeout(() => Toast.info(`会员余额：¥${(result.member_balance / 100).toFixed(2)}`), 1000);
-        }
-      }
+      // M1: 展示小票
+      ReceiptRenderer.showModal({
+        order_no: result.order_no,
+        order_id: result.order_id,
+        total: result.final_amount,
+        paid: result.paid_amount,
+        change: result.change,
+        pay_method: method,
+        items: receiptItems,
+        table_name: checkoutData.table_name || '',
+      });
+
+      // 结账成功 — confetti + checkmark 动效
+      showCheckoutSuccess(result.order_no, method, result.change_yuan);
+
+      // 如果是快餐且有 ready 状态 → 轮询
+      pollUntilReady(result.order_id, result.order_no);
+
     } catch (e) {
       Toast.error('结算失败：' + e.message);
+    }
+  }
+
+  /**
+   * M1: 结账成功动效 — confetti + checkmark
+   */
+  function showCheckoutSuccess(orderNo, method, changeYuan) {
+    const overlay = document.createElement('div');
+    overlay.className = 'qh-checkmark-overlay';
+
+    // Confetti 粒子
+    const colors = ['#10B981', '#0EA5E9', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'];
+    let confettiHtml = '';
+    for (let i = 0; i < 20; i++) {
+      const left = Math.random() * 100;
+      const color = colors[i % colors.length];
+      const delay = i;
+      const size = 6 + Math.random() * 6;
+      const rotation = Math.random() * 360;
+      confettiHtml += `<div class="qh-confetti-piece" style="left:${left}%;top:${30 + Math.random() * 20}%;--confetti-index:${delay};background:${color};width:${size}px;height:${size}px;transform:rotate(${rotation}deg)"></div>`;
+    }
+
+    const msg = method === 'cash' && changeYuan > 0
+      ? `收款成功，找零 ¥${changeYuan}`
+      : '收款成功';
+
+    overlay.innerHTML = `
+      ${confettiHtml}
+      <div class="qh-checkmark-circle">
+        <svg class="qh-checkmark-svg" viewBox="0 0 44 44"><polyline points="12,22 20,30 32,14"></polyline></svg>
+      </div>
+      <div class="qh-checkmark-text">${msg}</div>
+    `;
+    document.body.appendChild(overlay);
+    setTimeout(() => overlay.remove(), 2200);
+  }
+
+  /**
+   * M1: 轮询订单直到 kitchen_status=ready
+   */
+  function pollUntilReady(orderId, orderNo) {
+    let attempts = 0;
+    const maxAttempts = 60;
+
+    const timer = setInterval(async () => {
+      attempts++;
+      if (attempts > maxAttempts) {
+        clearInterval(timer);
+        return;
+      }
+      try {
+        const order = await API.get('/api/v1/merchant/orders/' + orderId);
+        if (order && (order.kitchen_status === 'ready' || order.status === 'ready')) {
+          clearInterval(timer);
+          const qNo = order.queue_no || ('A' + orderNo.slice(-2));
+          showPickupBanner(qNo);
+        }
+      } catch (e) {
+        // 静默失败，继续轮询
+      }
+    }, 5000);
+  }
+
+  /**
+   * M1: 顶部取餐号 banner
+   */
+  function showPickupBanner(number) {
+    const banner = document.getElementById('pickup-banner');
+    const numEl = document.getElementById('pickup-number');
+    if (banner && numEl) {
+      numEl.textContent = number;
+      banner.style.display = 'flex';
     }
   }
 
@@ -419,7 +596,8 @@ const POS = (() => {
     }
   }
 
-  // 挂单/取单
+  // ==================== 挂单 / 取单 / 清空 / 折扣 ====================
+
   function suspendCartFn() {
     if (App.state.cart.length === 0) {
       Toast.warning('购物车为空');
@@ -431,13 +609,15 @@ const POS = (() => {
     Toast.info(`已挂单 (${suspendedCart.length} 件商品)`);
   }
 
-  function resumeCartFn() {
+  async function resumeCartFn() {
     if (!suspendedCart) {
       Toast.warning('暂无挂单');
       return;
     }
     if (App.state.cart.length > 0) {
-      if (!confirm('当前购物车有商品，是否覆盖恢复挂单？')) return;
+      // ::code-comment{file:"js/pos.js", title:"修复 confirm 滥用 → qhConfirm", priority:0}
+      const ok = await qhConfirm('当前购物车有商品，是否覆盖恢复挂单？');
+      if (!ok) return;
     }
     App.state.cart = JSON.parse(JSON.stringify(suspendedCart));
     suspendedCart = null;
@@ -445,20 +625,23 @@ const POS = (() => {
     Toast.success('挂单已恢复');
   }
 
-  function clearCart() {
+  async function clearCart() {
     if (App.state.cart.length === 0) return;
-    if (!confirm('确定清空购物车？')) return;
+    // ::code-comment{file:"js/pos.js", title:"修复 confirm 滥用 → qhConfirm", priority:0}
+    const ok = await qhConfirm('确定清空购物车？');
+    if (!ok) return;
     App.state.cart = [];
     renderCart();
     Toast.info('购物车已清空');
   }
 
-  function applyDiscount() {
+  async function applyDiscount() {
     if (App.state.cart.length === 0) {
       Toast.warning('购物车为空');
       return;
     }
-    const input = prompt('请输入折扣比例（0-100，如 10 表示 9 折）：', '0');
+    // ::code-comment{file:"js/pos.js", title:"修复 prompt 滥用 → qhPrompt", priority:0}
+    const input = await qhPrompt('请输入折扣比例（0-100，如 10 表示 9 折）：', '0');
     if (input === null) return;
     const ratio = parseFloat(input);
     if (isNaN(ratio) || ratio < 0 || ratio >= 100) {
@@ -475,14 +658,15 @@ const POS = (() => {
     init, onShow, updateQty, removeItem,
     openCheckout, closeCheckout, selectPay, doCheckout,
     suspendCart: suspendCartFn, resumeCart: resumeCartFn,
-    addToCart, products: [], // exposed for Product module
+    addToCart, clearTableSelection,
+    selectTable,
   };
 })();
 
-// Set products reference
+// Products 引用
 Object.defineProperty(POS, 'products', {
-  get: function() { return products; },
-  set: function(val) { products = val; },
+  get: function () { return products; },
+  set: function (val) { products = val; },
 });
 
 window.POS = POS;

@@ -1,6 +1,7 @@
 /**
  * 扫码枪 / 条码输入模块
  * 功能：扫描条码或手动输入编号 → 查询商品 → 自动加入购物车
+ * M1 修复: prompt() → qhPrompt (称重业务流)
  */
 const BarcodeScanner = (() => {
   let modal = null;
@@ -157,9 +158,10 @@ const BarcodeScanner = (() => {
     }
   }
 
-  function addToCart(product) {
+  async function addToCart(product) {
     if (product.is_weighing) {
-      const weight = prompt(`请输入${product.name}重量（${product.unit || '斤'}）：`, '1');
+      // ::code-comment{file:"js/barcode.js", title:"修复 prompt 滥用 → qhPrompt (称重业务流)", priority:0}
+      const weight = await window.qhPrompt(`请输入${product.name}重量（${product.unit || '斤'}）：`, '1');
       if (!weight || isNaN(weight) || +weight <= 0) {
         Toast.warning('请输入有效重量');
         return;

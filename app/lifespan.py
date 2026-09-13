@@ -60,12 +60,27 @@ async def lifespan(app: FastAPI):
     if n_members:
         log.info(f"Seeded {n_members} demo members")
 
+    # ── M4: 初始化仓库与原料 ──
+    from app.application.inventory.inventory_service import InventoryService
+    inv_svc = InventoryService(merchant_id="local")
+    wh = inv_svc.init_warehouse(name="主仓库")
+    mats = inv_svc.init_raw_materials()
+    if wh:
+        log.info(f"初始化仓库: {wh.name} ({wh.id})")
+    if mats:
+        log.info(f"初始化 {len(mats)} 个示例原料")
+
     # ── License 验签 & 写入 tenants 表 ──
     from app.infra.db.models import Tenant
 
     result = verifier.verify(settings.license_path)
     app.state.license = result
     log.info("License 状态: %s (%s)", result.status, result.message)
+
+    # ── M5: 缓存 License 验签结果 (供离线使用) ──
+    from app.application.finance.offline_cache_service import OfflineCacheService
+    cache_svc = OfflineCacheService(settings=settings)
+    cache_svc.cache_verification(result)
 
     if result.payload:
         p = result.payload

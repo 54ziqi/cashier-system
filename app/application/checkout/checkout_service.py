@@ -54,12 +54,16 @@ class CheckoutService:
         cashier_id: str = "",
         member_id: str = "",
         idempotency_key: str = "",
+        table_id: str = "",
+        table_name: str = "",
+        spec_text: str = "",
     ) -> Order:
         """从购物车项创建订单（独立事务）"""
         with session_factory() as s:
             try:
                 order = self._do_create_order(
-                    s, items, cashier_id, member_id, idempotency_key
+                    s, items, cashier_id, member_id, idempotency_key,
+                    table_id=table_id, table_name=table_name, spec_text=spec_text,
                 )
                 s.commit()
                 return order
@@ -75,26 +79,58 @@ class CheckoutService:
         member_id: str = "",
         cash_amount: int = 0,
         idempotency_key: str = "",
+        table_id: str = "",
+        table_name: str = "",
+        spec_text: str = "",
+        coupon_code: str = "",
     ) -> dict:
         """
         原子结账：创建订单 + 扣减库存 + 支付 + 记账 在同一事务中。
         支付失败时整个事务回滚（库存自动恢复）。
+        M3: 支持优惠券抵扣。
+        M4/M5: 结账成功后消耗原料(KDS)。
         """
+        order_id = ""
         with session_factory() as s:
             try:
                 order = self._do_create_order(
-                    s, items, cashier_id, member_id, idempotency_key
+                    s, items, cashier_id, member_id, idempotency_key,
+                    table_id=table_id, table_name=table_name, spec_text=spec_text,
+                    coupon_code=coupon_code,
                 )
                 payment = self._do_pay(s, order, pay_method, member_id, cash_amount)
+                # M4: BOM 原料消耗（在同一 Session 事务中）
+                self._consume_materials(s, order)
                 s.commit()
                 log.info(f"Checkout OK: {order.order_no} pay={pay_method}")
-                return {
+                order_id = order.id
+                result = {
                     "order": order,
                     "payment": payment,
                 }
             except Exception:
                 s.rollback()
                 raise
+
+        # M5: 结账成功后创建 KDS 制作单（session 已关闭, 独立事务）
+        if order_id:
+            try:
+                from app.application.kds.kds_service import KdsService
+                KdsService(merchant_id=self.merchant_id).create_tickets(order_id)
+            except Exception as e:
+                log.warning(f"KDS 制作单创建失败（不影响结账）: {e}")
+
+        return result
+
+    @staticmethod
+    def _consume_materials(s: Session, order) -> None:
+        """在生产 Session 中按 BOM 消耗原料"""
+        try:
+            from app.application.inventory.production_service import ProductionService
+            svc = ProductionService(merchant_id=getattr(order, "merchant_id", "local"))
+            svc.consume_for_order(order.id, s=s)
+        except Exception as e:
+            log.warning(f"BOM 原料消耗失败（不影响交易）: {e}")
 
     # ── internal ( caller controls txn ) ─────────────────────────
 
@@ -105,6 +141,10 @@ class CheckoutService:
         cashier_id: str,
         member_id: str,
         idempotency_key: str,
+        table_id: str = "",
+        table_name: str = "",
+        spec_text: str = "",
+        coupon_code: str = "",
     ) -> Order:
         """在已给定的 Session 中创建订单并扣减库存"""
 
@@ -148,6 +188,18 @@ class CheckoutService:
             items=order_items,
         )
 
+        # M1 桌台/备注
+        if table_id:
+            order.table_id = table_id
+        if table_name:
+            order.table_name = table_name
+        if spec_text:
+            order.spec_text = spec_text
+
+        # M3 优惠券抵扣
+        if coupon_code:
+            self._apply_coupon(s, order, coupon_code)
+
         # Persist order
         order_model = OrderModel(
             id=order.id,
@@ -160,6 +212,9 @@ class CheckoutService:
             total_amount=order.total_amount,
             discount_amount=order.discount_amount,
             final_amount=order.final_amount,
+            table_id=table_id or None,
+            table_name=table_name or None,
+            spec_text=spec_text or None,
         )
         s.add(order_model)
 
@@ -225,19 +280,29 @@ class CheckoutService:
             raise CheckoutError("Order not found in DB")
 
         if pay_method == "cash":
-            return self._pay_cash(s, order_m, order, cash_amount)
+            return self._pay_cash(s, order_m, order, cash_amount, member_id)
         elif pay_method == "member_balance":
             return self._pay_balance(s, order_m, order)
         else:
             raise CheckoutError(f"支付方式 {pay_method} 尚未接入")
 
     def _pay_cash(
-        self, s: Session, order_m: OrderModel, order: Order, amount: int
+        self, s: Session, order_m: OrderModel, order: Order, amount: int, member_id: str = ""
     ) -> dict:
         if amount < order.final_amount:
             raise CheckoutError(f"现金不足: {amount} < {order.final_amount}")
 
         change = amount - order.final_amount
+
+        # M2: 积分赚取 (现金消费也给会员积分)
+        points_earned = 0
+        if member_id:
+            points_earned = order.final_amount // 100
+            if points_earned > 0:
+                s.execute(
+                    text("UPDATE members SET points = points + :pts WHERE id = :mid"),
+                    {"pts": points_earned, "mid": member_id},
+                )
 
         payment = PaymentModel(
             id=str(uuid.uuid4()),
@@ -249,7 +314,6 @@ class CheckoutService:
         )
         s.add(payment)
 
-        # 通过领域状态机流转
         order.pay(amount)
         order.complete()
         order_m.status = order.status.value
@@ -262,6 +326,7 @@ class CheckoutService:
             "amount": amount,
             "change": change,
             "status": "completed",
+            "points_earned": points_earned,
         }
 
     def _pay_balance(self, s: Session, order_m: OrderModel, order: Order) -> dict:
@@ -333,6 +398,9 @@ class CheckoutService:
                 "final_amount": order.final_amount,
                 "paid_amount": order.paid_amount,
                 "change_amount": order.change_amount,
+                "table_id": order.table_id,
+                "table_name": order.table_name,
+                "spec_text": order.spec_text,
                 "items": [
                     {
                         "product_name": i.product_name,
@@ -446,6 +514,60 @@ class CheckoutService:
                             f"退款返还余额: member={member.member_id} amount={balance_paid}"
                         )
 
+                # Step 3.5: 扣回积分（退还本次订单获得的积分）
+                earned_rows = s.execute(
+                    text(
+                        "SELECT points FROM member_points_txns "
+                        "WHERE ref_table = 'orders' AND ref_id = :oid AND type = 'earn'"
+                    ),
+                    {"oid": order_id},
+                ).fetchall()
+                total_earned = sum(r.points for r in earned_rows)
+                if total_earned > 0:
+                    member_for_points = s.execute(
+                        text("SELECT member_id FROM orders WHERE id = :oid"),
+                        {"oid": order_id},
+                    ).fetchone()
+                    if member_for_points and member_for_points.member_id:
+                        s.execute(
+                            text(
+                                "UPDATE members SET points = points - :pts WHERE id = :mid"
+                            ),
+                            {"pts": total_earned, "mid": member_for_points.member_id},
+                        )
+                        s.execute(
+                            text(
+                                "INSERT INTO member_points_txns "
+                                "(id, member_id, type, points, ref_table, ref_id, note, ts) "
+                                "VALUES (:id, :mid, 'refund', :pts, 'orders', :oid, :note, :now)"
+                            ),
+                            {
+                                "id": __import__("uuid").uuid4().hex,
+                                "mid": member_for_points.member_id,
+                                "pts": -total_earned,
+                                "oid": order_id,
+                                "note": f"退款扣回{total_earned}积分",
+                                "now": _utcnow().isoformat(),
+                            },
+                        )
+                        log.info(f"退款扣回积分: member={member_for_points.member_id} points={-total_earned}")
+
+                # Step 3.6: 退还优惠券（将已核销券状态恢复为 unused）
+                used_coupon = s.execute(
+                    text(
+                        "SELECT id FROM coupons WHERE ref_order_id = :oid AND status = 'used'"
+                    ),
+                    {"oid": order_id},
+                ).fetchone()
+                if used_coupon:
+                    s.execute(
+                        text(
+                            "UPDATE coupons SET status = 'unused', used_at = NULL, ref_order_id = NULL WHERE id = :cid"
+                        ),
+                        {"cid": used_coupon.id},
+                    )
+                    log.info(f"退款退券: coupon={used_coupon.id}")
+
                 # Step 4: 状态改为 refunded
                 s.execute(
                     text("UPDATE orders SET status = 'refunded' WHERE id = :oid"),
@@ -463,3 +585,23 @@ class CheckoutService:
             # 释放 savepoint
             s.execute(text("RELEASE SAVEPOINT refund_sp"))
             s.commit()
+
+    def _apply_coupon(self, s: Session, order: Order, code: str) -> None:
+        """在结账 Session 中核销优惠券并应用折扣"""
+        from app.application.promotion.coupon_service import CouponService
+
+        svc = CouponService(merchant_id=self.merchant_id)
+        result = svc.validate_coupon(code)
+        if not result.get("valid"):
+            raise CheckoutError(f"优惠券无效: {result.get('reason', 'unknown')}")
+        if result.get("min_amount", 0) > order.total_amount:
+            raise CheckoutError(
+                f"消费未满{result['min_amount']}分，无法使用该优惠券"
+            )
+
+        tpl_type = result["type"]
+        value = result["value"]
+        if tpl_type == "full_reduction":
+            discount = min(value, order.total_amount)
+            order.apply_discount(discount)
+            svc.redeem(code, order_id=order.id, session=s)

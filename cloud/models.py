@@ -76,6 +76,20 @@ class StoreRelation(Base):
     joined_at = Column(DateTime, default=_utcnow)
 
 
+class PolicyPush(Base):
+    """集团策略下发推送记录（ledger）"""
+
+    __tablename__ = "policy_pushes"
+
+    id = Column(String(36), primary_key=True, default=lambda: uuid.uuid4().hex)
+    parent_tenant_id = Column(String(36), nullable=False, index=True)
+    target_tenant_id = Column(String(36), nullable=False, index=True)
+    policy_type = Column(String(32), nullable=False)  # menu | prices | members | promotions
+    payload_json = Column(Text, nullable=False)
+    push_version = Column(Integer, nullable=False)
+    created_at = Column(DateTime, default=_utcnow)
+
+
 def init_db(db_path: str = "cloud/data/cloud.db"):
     engine = create_engine(f"sqlite:///{db_path}", echo=False)
     Base.metadata.create_all(engine)

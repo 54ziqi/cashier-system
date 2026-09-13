@@ -1,5 +1,6 @@
 /**
  * 商品管理模块：分类管理 + 商品 CRUD + 搜索/筛选/上下架
+ * M1 修复: prompt() → 自定义 modal
  */
 const ProductManage = (() => {
   let currentPage = 1;
@@ -81,18 +82,57 @@ const ProductManage = (() => {
 
   function promptCategory(data = null) {
     const isEdit = !!data;
-    const name = prompt(`${isEdit ? '编辑' : '新增'}分类名称：`, data?.name || '');
-    if (!name || !name.trim()) return;
+    // ::code-comment{file:"js/product-manage.js", title:"修复 prompt 滥用 → 自定义 modal 表单", priority:0}
+    const overlay = document.createElement('div');
+    overlay.className = 'qh-confirm-overlay';
+    overlay.innerHTML = `
+      <div class="qh-confirm-box" role="dialog" aria-modal="true" aria-label="${isEdit ? '编辑分类' : '新增分类'}">
+        <div class="qh-confirm-msg" style="text-align:left;font-weight:600;margin-bottom:16px">${isEdit ? '✏️ 编辑分类' : '＋ 新增分类'}</div>
+        <div style="margin-bottom:20px">
+          <label style="font-size:13px;color:var(--c-text-secondary);display:block;margin-bottom:4px">分类名称</label>
+          <input class="input" id="category-name-input" value="${escapeHtml(data?.name || '')}" placeholder="如：饮品" autofocus>
+        </div>
+        <div class="qh-confirm-btns">
+          <button class="btn btn-outline" data-act="cancel">取消</button>
+          <button class="btn btn-green" data-act="ok">${isEdit ? '保存' : '创建'}</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+    requestAnimationFrame(() => overlay.classList.add('visible'));
 
-    if (isEdit) {
-      API.categories.update(data.id, { name: name.trim() })
-        .then(() => { Toast.success('分类已更新'); loadCategories(); })
-        .catch(e => Toast.error('更新失败：' + e.message));
-    } else {
-      API.categories.create({ name: name.trim() })
-        .then(() => { Toast.success('分类已创建'); loadCategories(); })
-        .catch(e => Toast.error('创建失败：' + e.message));
-    }
+    const input = overlay.querySelector('#category-name-input');
+    input.focus();
+    input.select();
+
+    const close = () => {
+      overlay.classList.remove('visible');
+      setTimeout(() => overlay.remove(), 200);
+    };
+
+    overlay.querySelector('[data-act="ok"]').addEventListener('click', () => {
+      const name = input.value.trim();
+      if (!name) { Toast.warning('请输入分类名称'); return; }
+
+      if (isEdit) {
+        API.categories.update(data.id, { name })
+          .then(() => { Toast.success('分类已更新'); loadCategories(); })
+          .catch(e => Toast.error('更新失败：' + e.message));
+      } else {
+        API.categories.create({ name })
+          .then(() => { Toast.success('分类已创建'); loadCategories(); })
+          .catch(e => Toast.error('创建失败：' + e.message));
+      }
+      close();
+    });
+
+    overlay.querySelector('[data-act="cancel"]').addEventListener('click', close);
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') overlay.querySelector('[data-act="ok"]').click();
+    });
+    const esc = (e) => { if (e.key === 'Escape') { document.removeEventListener('keydown', esc); close(); } };
+    document.addEventListener('keydown', esc);
   }
 
   function addCategory() {
@@ -105,7 +145,9 @@ const ProductManage = (() => {
   }
 
   async function deleteCategory(id) {
-    if (!confirm('确定删除此分类？商品不会被删除。')) return;
+    // ::code-comment{file:"js/product-manage.js", title:"修复 confirm 滥用 → qhConfirm", priority:0}
+    const ok = await qhConfirm('确定删除此分类？商品不会被删除。');
+    if (!ok) return;
     try {
       await API.categories.del(id);
       Toast.success('分类已删除');
