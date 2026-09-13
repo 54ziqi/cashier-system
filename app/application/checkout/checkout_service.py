@@ -568,6 +568,16 @@ class CheckoutService:
                     )
                     log.info(f"退款退券: coupon={used_coupon.id}")
 
+                # Step 3.7: 恢复 BOM 原料库存
+                try:
+                    from app.application.inventory.production_service import ProductionService
+                    prod_svc = ProductionService(merchant_id=self.merchant_id)
+                    restored_materials = prod_svc.restore_for_refund(order_id, session=s)
+                    if restored_materials:
+                        log.info(f"退款归还原料: {len(restored_materials)} 项")
+                except Exception as mat_e:
+                    log.warning(f"BOM 原料归还失败（跳过）: {mat_e}")
+
                 # Step 4: 状态改为 refunded
                 s.execute(
                     text("UPDATE orders SET status = 'refunded' WHERE id = :oid"),
@@ -587,11 +597,18 @@ class CheckoutService:
             s.commit()
 
     def _apply_coupon(self, s: Session, order: Order, code: str) -> None:
-        """在结账 Session 中核销优惠券并应用折扣"""
+        """在结账 Session 中核销优惠券并应用折扣
+
+        支持的券类型:
+        - "amount": 直减，value 单位是分
+        - "percentage": 折扣率，value 单位是 % (如 80 表示八折，减 20%)
+        """
         from app.application.promotion.coupon_service import CouponService
 
         svc = CouponService(merchant_id=self.merchant_id)
-        result = svc.validate_coupon(code)
+
+        # 用订单上下文校验最低消费（订单在创建时已经算好 total_amount）
+        result = svc.validate_coupon(code, order_context={"subtotal": order.total_amount})
         if not result.get("valid"):
             raise CheckoutError(f"优惠券无效: {result.get('reason', 'unknown')}")
         if result.get("min_amount", 0) > order.total_amount:
@@ -601,7 +618,18 @@ class CheckoutService:
 
         tpl_type = result["type"]
         value = result["value"]
-        if tpl_type == "full_reduction":
+
+        if tpl_type == "amount":
+            # 直减：value 单位是分，不超过订单总额
             discount = min(value, order.total_amount)
             order.apply_discount(discount)
-            svc.redeem(code, order_id=order.id, session=s)
+        elif tpl_type == "percentage":
+            # 折扣率：value 如 80 表示八折 → 减 (100-80)%
+            discount = int(order.total_amount * (100 - value) / 100)
+            if discount > 0:
+                order.apply_discount(discount)
+        else:
+            raise CheckoutError(f"不支持的券类型: {tpl_type}")
+
+        # 在同一个 session 中核销，参与 checkout 事务
+        svc.redeem(code, order_id=order.id, session=s)

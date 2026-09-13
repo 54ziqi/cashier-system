@@ -141,10 +141,15 @@ class CouponService:
 
     # ── 核销 ──────────────────────────────────────────────────────
 
-    def redeem(self, code: str, order_id: str) -> dict:
-        """核销: unused → used — CAS 原子操作防止并发双扣"""
+    def redeem(self, code: str, order_id: str, session=None) -> dict:
+        """核销: unused → used — CAS 原子操作防止并发双扣
+
+        当传入 session 参数时，在该 session 中执行（不 commit），便于调用方控制事务；
+        否则使用独立 session_factory 事务并 commit。
+        """
         code_upper = code.upper()
-        with session_factory() as s:
+
+        def _do_redeem(s):
             from sqlalchemy import text
 
             # 先校验券码存在性和模板有效期（只读查询）
@@ -177,18 +182,28 @@ class CouponService:
                 text("UPDATE coupon_templates SET used_qty = used_qty + 1 WHERE id = :tid"),
                 {"tid": coupon.template_id},
             )
-            s.commit()
 
             # 脱敏打印券码前4后2位
             masked = code_upper[:4] + "****" + code_upper[-2:] if len(code_upper) > 6 else "****"
             log.info(f"核销: code={masked} order={order_id}")
-            return {
-                "coupon_id": coupon.id,
-                "template_id": coupon.template_id,
-                "code": coupon.code,
-                "status": "used",
-                "order_id": order_id,
-            }
+
+        if session is not None:
+            # 调用方控制事务，不 commit
+            _do_redeem(session)
+            coupon_obj = session.query(Coupon).filter_by(code=code_upper).first()
+        else:
+            with session_factory() as s:
+                _do_redeem(s)
+                s.commit()
+                coupon_obj = s.query(Coupon).filter_by(code=code_upper).first()
+
+        return {
+            "coupon_id": coupon_obj.id if coupon_obj else None,
+            "template_id": coupon_obj.template_id if coupon_obj else None,
+            "code": coupon_obj.code if coupon_obj else code_upper,
+            "status": "used",
+            "order_id": order_id,
+        }
 
     # ── 查询 ──────────────────────────────────────────────────────
 

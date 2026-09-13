@@ -778,3 +778,385 @@ class TestCheckoutIntegration:
         with session_factory() as s:
             db_order = s.query(Order).filter_by(id=order_id).first()
             assert db_order.status == "refunded"
+
+    # ──────────────────────────────────────────────────────────────
+    # P0/P1 修复专项测试
+    # ──────────────────────────────────────────────────────────────
+
+    def _create_product(self, app, name: str, price: int, stock: int = 100) -> dict:
+        """测试助手：创建测试用商品"""
+        import uuid
+        from app.infra.db.engine import session_factory
+        from app.infra.db.models import Product
+
+        pid = str(uuid.uuid4())
+        with session_factory() as s:
+            p = Product(
+                id=pid,
+                merchant_id="local",
+                name=name,
+                barcode=f"t-{pid[:8]}",
+                price=price,
+                stock=float(stock),
+                status="active",
+            )
+            s.add(p)
+            s.commit()
+            return {"id": p.id, "name": p.name, "price": p.price, "stock": p.stock}
+
+    def test_coupon_amount_discount(self, app):
+        """P0-1: amount 券直减 — value=500 分, 商品 2000 分, 结账后 final_amount == 1500"""
+        from app.application.checkout.checkout_service import CheckoutService
+        from app.application.member.member_service import MemberService
+        from app.application.promotion.coupon_service import CouponService
+
+        checkout_svc = CheckoutService(sid="local")
+        member_svc = MemberService(merchant_id="local")
+        coupon_svc = CouponService(merchant_id="local")
+
+        m = member_svc.create_member({"name": "券直减", "phone": "13800500020"})
+        product = self._create_product(app, "直减测试品", price=2000, stock=50)
+
+        # 创建 amount 券模板 (500分) 并发券
+        tpl = coupon_svc.create_template({
+            "name": "5元直减券",
+            "type": "amount",
+            "value": 500,
+            "min_amount": 0,
+        })
+        coupon = coupon_svc.issue(tpl["id"], m["id"])
+
+        result = checkout_svc.checkout(
+            items=[{"product_id": product["id"], "quantity": 1}],
+            pay_method="cash",
+            cashier_id="cashier-1",
+            member_id=m["id"],
+            cash_amount=product["price"] + 1000,
+            coupon_code=coupon.code,
+        )
+        assert result["order"].final_amount == 1500, \
+            f"Expected 1500 (2000-500), got {result['order'].final_amount}"
+
+    def test_coupon_percentage_discount(self, app):
+        """P0-1: percentage 券八折 — value=80 (减20%), 商品 1000 分, 结账后 final_amount == 800"""
+        from app.application.checkout.checkout_service import CheckoutService
+        from app.application.member.member_service import MemberService
+        from app.application.promotion.coupon_service import CouponService
+
+        checkout_svc = CheckoutService(sid="local")
+        member_svc = MemberService(merchant_id="local")
+        coupon_svc = CouponService(merchant_id="local")
+
+        m = member_svc.create_member({"name": "折扣用户", "phone": "13800500021"})
+        product = self._create_product(app, "折后测试品", price=1000, stock=50)
+
+        # 创建 percentage 券模板 (value=80 表示八折，减 20%)
+        tpl = coupon_svc.create_template({
+            "name": "八折券",
+            "type": "percentage",
+            "value": 80,
+            "min_amount": 0,
+        })
+        coupon = coupon_svc.issue(tpl["id"], m["id"])
+
+        result = checkout_svc.checkout(
+            items=[{"product_id": product["id"], "quantity": 1}],
+            pay_method="cash",
+            cashier_id="cashier-1",
+            member_id=m["id"],
+            cash_amount=product["price"] + 1000,
+            coupon_code=coupon.code,
+        )
+        assert result["order"].final_amount == 800, \
+            f"Expected 800 (1000*0.8), got {result['order'].final_amount}"
+
+    def test_refund_restores_material_stock(self, app):
+        """P1-1: 退款时恢复 BOM 原料库存"""
+        from app.application.checkout.checkout_service import CheckoutService
+        from app.application.member.member_service import MemberService
+        from app.infra.db.engine import session_factory
+        from app.infra.db.models import (
+            Material as MaterialModel,
+            Order,
+            Product as ProductModel,
+            RecipeBOM as BOMModel,
+            Warehouse as WarehouseModel,
+            WarehouseStock as WarehouseStockModel,
+        )
+
+        member_svc = MemberService(merchant_id="local")
+        m = member_svc.create_member({"name": "退款原料", "phone": "13800500022"})
+
+        # 1. 创建主仓库
+        with session_factory() as s:
+            wh = WarehouseModel(
+                id="wh-test-001",
+                merchant_id="local",
+                name="主仓库",
+                type="main",
+            )
+            s.add(wh)
+            s.commit()
+
+        # 2. 创建原料 (初始库存 1000)
+        with session_factory() as s:
+            mat = MaterialModel(
+                id="mat-test-001",
+                merchant_id="local",
+                name="测试原料",
+                unit="g",
+                cost_price=10,
+                stock=1000.0,
+            )
+            s.add(mat)
+            s.commit()
+
+        # 3. 创建仓库库存
+        with session_factory() as s:
+            ws = WarehouseStockModel(
+                id="ws-test-001",
+                warehouse_id="wh-test-001",
+                material_id="mat-test-001",
+                qty=1000.0,
+            )
+            s.add(ws)
+            s.commit()
+
+        # 4. 创建商品 + BOM (1个商品消耗 100g 原料)
+        with session_factory() as s:
+            product = ProductModel(
+                id="prod-bom-test-001",
+                merchant_id="local",
+                name="BOM测试菜品",
+                barcode="bom-test-001",
+                price=2000,
+                stock=50.0,
+            )
+            s.add(product)
+            bom = BOMModel(
+                id="bom-test-001",
+                product_id="prod-bom-test-001",
+                material_id="mat-test-001",
+                qty=100.0,
+                wastage_pct=0,
+                unit="g",
+            )
+            s.add(bom)
+            s.commit()
+
+        # 5. 结账 (消耗产品库存 + 原料库存)
+        checkout_svc = CheckoutService(sid="local")
+        result = checkout_svc.checkout(
+            items=[{"product_id": "prod-bom-test-001", "quantity": 2}],
+            pay_method="cash",
+            cashier_id="cashier-1",
+            member_id=m["id"],
+            cash_amount=10000,
+        )
+        order_id = result["order"].id
+
+        # 6. 验证结账扣减了物料库存: 1000 - 2*100 = 800
+        with session_factory() as s:
+            ws_after_checkout = s.query(WarehouseStockModel).filter_by(id="ws-test-001").first()
+            assert ws_after_checkout.qty == 800.0, \
+                f"Expected ws.qty=800 after checkout, got {ws_after_checkout.qty}"
+            mat_after_checkout = s.query(MaterialModel).filter_by(id="mat-test-001").first()
+            assert mat_after_checkout.stock == 800.0, \
+                f"Expected mat.stock=800 after checkout, got {mat_after_checkout.stock}"
+
+        # 7. 退款
+        checkout_svc.refund_order(order_id)
+
+        # 8. 验证退款恢复了物料库存: 800 + 2*100 = 1000
+        with session_factory() as s:
+            ws_after_refund = s.query(WarehouseStockModel).filter_by(id="ws-test-001").first()
+            assert ws_after_refund.qty == 1000.0, \
+                f"Expected ws.qty=1000 after refund, got {ws_after_refund.qty}"
+            mat_after_refund = s.query(MaterialModel).filter_by(id="mat-test-001").first()
+            assert mat_after_refund.stock == 1000.0, \
+                f"Expected mat.stock=1000 after refund, got {mat_after_refund.stock}"
+            # 验证订单状态
+            db_order = s.query(Order).filter_by(id=order_id).first()
+            assert db_order.status == "refunded"
+
+    # ──────────────────────────────────────────────────────────────
+    # Phase 2: 边界测试 (Hardener 补充)
+    # ──────────────────────────────────────────────────────────────
+
+    def test_coupon_amount_exceeds_total(self, app):
+        """边界: amount 券 value=999999 (远超商品价格) — final_amount 最小为 0, 不允许负数"""
+        from app.application.checkout.checkout_service import CheckoutService
+        from app.application.member.member_service import MemberService
+        from app.application.promotion.coupon_service import CouponService
+
+        checkout_svc = CheckoutService(sid="local")
+        member_svc = MemberService(merchant_id="local")
+        coupon_svc = CouponService(merchant_id="local")
+
+        m = member_svc.create_member({"name": "大额券用户", "phone": "13800500030"})
+        product = self._create_product(app, "大额券测试品", price=2000, stock=50)
+
+        # 创建 amount 券模板 (999999分 >> 商品2000分)
+        tpl = coupon_svc.create_template({
+            "name": "超大券",
+            "type": "amount",
+            "value": 999999,
+            "min_amount": 0,
+        })
+        coupon = coupon_svc.issue(tpl["id"], m["id"])
+
+        result = checkout_svc.checkout(
+            items=[{"product_id": product["id"], "quantity": 1}],
+            pay_method="cash",
+            cashier_id="cashier-1",
+            member_id=m["id"],
+            cash_amount=10000,
+            coupon_code=coupon.code,
+        )
+        # final_amount 最小为 0, 不允许负数
+        assert result["order"].final_amount == 0, \
+            f"Expected final_amount=0 (min clamp), got {result['order'].final_amount}"
+        assert result["order"].final_amount >= 0, \
+            "final_amount must never be negative"
+
+    def test_coupon_percentage_zero(self, app):
+        """边界: percentage 券 value=100 (原价，零折扣) — final_amount == total_amount"""
+        from app.application.checkout.checkout_service import CheckoutService
+        from app.application.member.member_service import MemberService
+        from app.application.promotion.coupon_service import CouponService
+
+        checkout_svc = CheckoutService(sid="local")
+        member_svc = MemberService(merchant_id="local")
+        coupon_svc = CouponService(merchant_id="local")
+
+        m = member_svc.create_member({"name": "零折用户", "phone": "13800500031"})
+        product = self._create_product(app, "零折测试品", price=1000, stock=50)
+
+        # 创建 percentage 券模板 (value=100 表示原价，零折扣)
+        tpl = coupon_svc.create_template({
+            "name": "原价券",
+            "type": "percentage",
+            "value": 100,
+            "min_amount": 0,
+        })
+        coupon = coupon_svc.issue(tpl["id"], m["id"])
+
+        result = checkout_svc.checkout(
+            items=[{"product_id": product["id"], "quantity": 1}],
+            pay_method="cash",
+            cashier_id="cashier-1",
+            member_id=m["id"],
+            cash_amount=10000,
+            coupon_code=coupon.code,
+        )
+        # value=100 → discount=0 → final_amount == total_amount == 1000
+        assert result["order"].final_amount == result["order"].total_amount, \
+            f"Expected final_amount == total_amount ({result['order'].total_amount}), got {result['order'].final_amount}"
+        assert result["order"].final_amount == 1000, \
+            f"Expected final_amount=1000, got {result['order'].final_amount}"
+
+    def test_refund_material_stock_idempotent(self, app):
+        """边界: 同一订单退款两次 — 第二次应 raise CheckoutError (CAS 幂等防护)"""
+        from app.application.checkout.checkout_service import CheckoutService, CheckoutError
+        from app.application.member.member_service import MemberService
+        from app.infra.db.engine import session_factory
+        from app.infra.db.models import (
+            Material as MaterialModel,
+            Order,
+            Product as ProductModel,
+            RecipeBOM as BOMModel,
+            Warehouse as WarehouseModel,
+            WarehouseStock as WarehouseStockModel,
+        )
+
+        member_svc = MemberService(merchant_id="local")
+        m = member_svc.create_member({"name": "幂等退款", "phone": "13800500032"})
+
+        # 1. 创建主仓库
+        with session_factory() as s:
+            wh = WarehouseModel(
+                id="wh-idempotent-001",
+                merchant_id="local",
+                name="幂等仓库",
+                type="main",
+            )
+            s.add(wh)
+            s.commit()
+
+        # 2. 创建原料 (初始库存 500)
+        with session_factory() as s:
+            mat = MaterialModel(
+                id="mat-idempotent-001",
+                merchant_id="local",
+                name="幂等原料",
+                unit="g",
+                cost_price=10,
+                stock=500.0,
+            )
+            s.add(mat)
+            s.commit()
+
+        # 3. 创建仓库库存
+        with session_factory() as s:
+            ws = WarehouseStockModel(
+                id="ws-idempotent-001",
+                warehouse_id="wh-idempotent-001",
+                material_id="mat-idempotent-001",
+                qty=500.0,
+            )
+            s.add(ws)
+            s.commit()
+
+        # 4. 创建商品 + BOM (1个商品消耗 50g 原料)
+        with session_factory() as s:
+            product = ProductModel(
+                id="prod-idempotent-001",
+                merchant_id="local",
+                name="幂等菜品",
+                barcode="idem-001",
+                price=1500,
+                stock=30.0,
+            )
+            s.add(product)
+            bom = BOMModel(
+                id="bom-idempotent-001",
+                product_id="prod-idempotent-001",
+                material_id="mat-idempotent-001",
+                qty=50.0,
+                wastage_pct=0,
+                unit="g",
+            )
+            s.add(bom)
+            s.commit()
+
+        # 5. 结账
+        checkout_svc = CheckoutService(sid="local")
+        result = checkout_svc.checkout(
+            items=[{"product_id": "prod-idempotent-001", "quantity": 1}],
+            pay_method="cash",
+            cashier_id="cashier-1",
+            member_id=m["id"],
+            cash_amount=10000,
+        )
+        order_id = result["order"].id
+
+        # 6. 第一次退款: 成功, 订单状态变为 refunded
+        checkout_svc.refund_order(order_id)
+        with session_factory() as s:
+            ws_first = s.query(WarehouseStockModel).filter_by(id="ws-idempotent-001").first()
+            assert ws_first.qty == 500.0, "First refund should restore stock to 500"
+
+        # 7. 第二次退款: should raise CheckoutError (CAS 幂等拦截)
+        with pytest.raises(CheckoutError) as exc_info:
+            checkout_svc.refund_order(order_id)
+        assert "Cannot refund" in str(exc_info.value) or "refund" in str(exc_info.value).lower(), \
+            f"Expected CheckoutError about invalid refund state, got: {exc_info.value}"
+
+        # 8. 验证原料未被重复归还 (CAS 拦截后 ws.qty 应该仍然是 500, 不是 550)
+        with session_factory() as s:
+            ws_second = s.query(WarehouseStockModel).filter_by(id="ws-idempotent-001").first()
+            assert ws_second.qty == 500.0, \
+                f"Stock must not be double-restored: expected 500, got {ws_second.qty}"
+            db_order = s.query(Order).filter_by(id=order_id).first()
+            assert db_order.status == "refunded", \
+                "Order status must remain 'refunded' after failed second refund"

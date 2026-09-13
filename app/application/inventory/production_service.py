@@ -167,74 +167,86 @@ class ProductionService:
 
             return total_cost
 
-    def restore_for_refund(self, order_id: str) -> list[dict]:
-        """退款时归还原料库存"""
+    def restore_for_refund(self, order_id: str, session=None) -> list[dict]:
+        """退款时归还原料库存
+
+        如果传入 session (Session) 则在给定 session 中执行（不 commit）；
+        否则使用独立 session_factory 事务并 commit。
+        """
+        if session is not None:
+            return self._do_restore(session, order_id)
         with session_factory() as s:
-            order_items = s.query(OrderItemModel).filter_by(order_id=order_id).all()
-            wh = (
-                s.query(WarehouseModel)
-                .filter_by(merchant_id=self.merchant_id, type="main")
-                .first()
-            )
-            if not wh or not order_items:
-                return []
-
-            restored = []
-            for oi in order_items:
-                bom_rows = s.query(BOMModel).filter_by(product_id=oi.product_id).all()
-                for bom in bom_rows:
-                    effective_qty = bom.qty * oi.quantity * (1 + bom.wastage_pct / 100.0)
-                    if effective_qty <= 0:
-                        continue
-
-                    # 归还库存
-                    s.execute(
-                        text(
-                            "UPDATE warehouse_stocks SET qty = qty + :qty "
-                            "WHERE warehouse_id = :wid AND material_id = :mid"
-                        ),
-                        {"qty": effective_qty, "wid": wh.id, "mid": bom.material_id},
-                    )
-                    s.execute(
-                        text(
-                            "UPDATE materials SET stock = stock + :qty, updated_at = :now "
-                            "WHERE id = :mid"
-                        ),
-                        {
-                            "qty": effective_qty,
-                            "now": _utcnow().isoformat(),
-                            "mid": bom.material_id,
-                        },
-                    )
-
-                    bal_row = s.execute(
-                        text(
-                            "SELECT qty FROM warehouse_stocks "
-                            "WHERE warehouse_id = :wid AND material_id = :mid"
-                        ),
-                        {"wid": wh.id, "mid": bom.material_id},
-                    ).fetchone()
-                    balance_after = float(bal_row[0]) if bal_row else 0
-
-                    mv = StockMovementModel(
-                        id=str(uuid.uuid4()),
-                        warehouse_id=wh.id,
-                        material_id=bom.material_id,
-                        type="inbound",
-                        qty=effective_qty,
-                        balance_after=balance_after,
-                        ref_table="orders",
-                        ref_id=order_id,
-                        note=f"退款归还: {oi.product_name} x{oi.quantity}",
-                    )
-                    s.add(mv)
-                    restored.append(
-                        {
-                            "material_id": bom.material_id,
-                            "restore_qty": round(effective_qty, 2),
-                            "balance_after": balance_after,
-                        }
-                    )
-
+            result = self._do_restore(s, order_id)
             s.commit()
-            return restored
+            return result
+
+    def _do_restore(self, s: Session, order_id: str) -> list[dict]:
+        """实际执行 BOM 归还逻辑（在已有 Session 上操作）"""
+        order_items = s.query(OrderItemModel).filter_by(order_id=order_id).all()
+        wh = (
+            s.query(WarehouseModel)
+            .filter_by(merchant_id=self.merchant_id, type="main")
+            .first()
+        )
+        if not wh or not order_items:
+            return []
+
+        restored = []
+        for oi in order_items:
+            bom_rows = s.query(BOMModel).filter_by(product_id=oi.product_id).all()
+            for bom in bom_rows:
+                effective_qty = bom.qty * oi.quantity * (1 + bom.wastage_pct / 100.0)
+                if effective_qty <= 0:
+                    continue
+
+                # 归还库存
+                s.execute(
+                    text(
+                        "UPDATE warehouse_stocks SET qty = qty + :qty "
+                        "WHERE warehouse_id = :wid AND material_id = :mid"
+                    ),
+                    {"qty": effective_qty, "wid": wh.id, "mid": bom.material_id},
+                )
+                s.execute(
+                    text(
+                        "UPDATE materials SET stock = stock + :qty, updated_at = :now "
+                        "WHERE id = :mid"
+                    ),
+                    {
+                        "qty": effective_qty,
+                        "now": _utcnow().isoformat(),
+                        "mid": bom.material_id,
+                    },
+                )
+
+                bal_row = s.execute(
+                    text(
+                        "SELECT qty FROM warehouse_stocks "
+                        "WHERE warehouse_id = :wid AND material_id = :mid"
+                    ),
+                    {"wid": wh.id, "mid": bom.material_id},
+                ).fetchone()
+                balance_after = float(bal_row[0]) if bal_row else 0
+
+                mv = StockMovementModel(
+                    id=str(uuid.uuid4()),
+                    warehouse_id=wh.id,
+                    material_id=bom.material_id,
+                    type="inbound",
+                    qty=effective_qty,
+                    balance_after=balance_after,
+                    ref_table="orders",
+                    ref_id=order_id,
+                    note=f"退款归还: {oi.product_name} x{oi.quantity}",
+                )
+                s.add(mv)
+                restored.append(
+                    {
+                        "material_id": bom.material_id,
+                        "product_name": oi.product_name,
+                        "restore_qty": round(effective_qty, 2),
+                        "balance_after": balance_after,
+                    }
+                )
+
+        return restored
