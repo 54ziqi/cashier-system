@@ -1,0 +1,154 @@
+/* ==========================================================================
+   M1 商品规格选择器样式
+   ========================================================================== */
+
+.spec-modal-overlay {
+  z-index: 1001;
+}
+
+.spec-modal {
+  width: 480px;
+  max-width: 95vw;
+}
+
+.spec-modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+/* ---- Spec Group ---- */
+.spec-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.spec-group-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--qh-ink);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.spec-required {
+  color: var(--qh-danger);
+  font-weight: 700;
+  margin-left: 2px;
+}
+
+.spec-multi-hint {
+  font-size: 11px;
+  color: var(--qh-ink-mute);
+  font-weight: 400;
+}
+
+/* ---- Spec Options Grid ---- */
+.spec-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.spec-option-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border: 2px solid var(--qh-line);
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--qh-ink);
+  background: var(--qh-surface);
+  cursor: pointer;
+  transition: all var(--qh-dur-fast, 0.15s) ease;
+}
+
+.spec-option-btn:hover {
+  border-color: var(--qh-info);
+  background: var(--qh-info-bg);
+}
+
+.spec-option-btn.selected {
+  border-color: var(--qh-green);
+  background: var(--qh-success-bg);
+  color: var(--qh-success-text);
+  font-weight: 600;
+}
+
+.spec-option-btn:active {
+  transform: scale(0.96);
+}
+
+.spec-opt-value {
+  font-weight: inherit;
+}
+
+.spec-opt-delta {
+  font-size: 11px;
+  opacity: 0.8;
+}
+
+.spec-option-btn.selected .spec-opt-delta {
+  color: var(--qh-green-strong);
+}
+
+/* ---- Total ---- */
+.spec-total-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-top: 2px solid var(--qh-line);
+  margin-top: 4px;
+}
+
+.spec-total-label {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--qh-ink);
+}
+
+.spec-total-price {
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--qh-green);
+  font-feature-settings: "tnum";
+}
+
+/* ---- Confirm ---- */
+.spec-btn-confirm {
+  background: var(--qh-green);
+  color: #fff;
+  padding: 10px 28px;
+  font-size: 15px;
+  border-radius: 8px;
+  font-weight: 600;
+  transition: all 0.15s;
+}
+
+.spec-btn-confirm:hover {
+  background: var(--qh-green-strong);
+}
+
+.spec-btn-confirm:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.spec-btn-cancel {
+  background: transparent;
+  border: 1.5px solid var(--qh-line);
+  padding: 10px 24px;
+  font-size: 14px;
+  border-radius: 8px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spec-option-btn { transition: none; }
+}
