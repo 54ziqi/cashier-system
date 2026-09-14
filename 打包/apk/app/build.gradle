@@ -36,21 +36,24 @@ android {
         // Chaquopy 15.x: pip packages go inside defaultConfig.python
         python {
             pip {
-                options "--index-url", "https://mirrors.aliyun.com/pypi/simple/"
-                options "--trusted-host", "mirrors.aliyun.com"
-
+                // Use Chaquopy's own Android-compatible wheel index (default)
                 install "fastapi>=0.115"
-                install "uvicorn[standard]>=0.32"
+                install "uvicorn>=0.32"
                 install "pydantic>=2.9"
                 install "pydantic-settings>=2.5"
                 install "sqlalchemy>=2.0.35"
-                install "bcrypt>=4.2"
-                install "cryptography>=43.0"
                 install "tomli>=2.0"
                 install "python-multipart"
-                install "jinja2"
-                install "httpx"
-                install "psutil"
+                install "jinja2>=3.1"
+                # cryptography >=43 needs Rust (maturin) – Chaquopy has prebuilt wheels 
+                # up to 42.0.x; use that version for now
+                install "cryptography==42.0.5"
+                # httpx: pure-Python, Chaquopy has Android wheel
+                install "httpx>=0.27"
+                # bcrypt: Chaquopy has Android wheel
+                install "bcrypt>=4.1"
+                # psutil: Chaquopy has Android wheel
+                install "psutil>=5.9"
             }
         }
     }
