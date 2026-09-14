@@ -15,7 +15,7 @@ jobs:
       ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
 
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: Set up JDK 17
@@ -27,34 +27,25 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Install Android SDK components
+      - name: Accept licenses & install SDK components
         run: |
-          yes | sdkmanager --licenses > /dev/null 2>&1
+          yes | sdkmanager --licenses > /dev/null 2>&1 || true
           sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0" "ndk;25.2.9519653" "cmake;3.22.1"
 
       - name: Install Gradle 8.2
         run: |
-          wget -q https://services.gradle.org/distributions/gradle-8.2-bin.zip -O gradle.zip
-          unzip -q gradle.zip -d /opt/
+          wget -q https://services.gradle.org/distributions/gradle-8.2-bin.zip -O /tmp/gradle.zip
+          unzip -q /tmp/gradle.zip -d /opt/
           echo "/opt/gradle-8.2/bin" >> $GITHUB_PATH
           gradle --version
 
-      - name: Build debug APK
-        working-directory: 打包/apk
+      - name: Build debug APK (WebView app)
+        working-directory: 打包/webview-app
         run: gradle assembleDebug --no-daemon --stacktrace
 
-      - name: Upload APK artifact
+      - name: Upload APK
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: cashier-system-debug-apk
-          path: 打包/apk/app/build/outputs/apk/debug/*.apk
-          retention-days: 30
-
-      - name: Upload build logs
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-logs
-          path: 打包/apk/app/build/
-          retention-days: 7
+          name: qihhao-pos-debug-apk
+          path: 打包/webview-app/app/build/outputs/apk/debug/*.apk
