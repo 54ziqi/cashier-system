@@ -1,0 +1,21 @@
+# Auto detect text files and perform LF conversion
+* text=auto
+
+# Batch files need CRLF
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Shell scripts need LF
+*.sh text eol=lf
+gradlew text eol=lf
+
+# Binary files
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.jar binary
+*.apk binary
+*.so binary
+*.db binary
