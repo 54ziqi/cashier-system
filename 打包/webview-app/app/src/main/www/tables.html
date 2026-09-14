@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>柒号收银 · 桌台管理</title>
+  <link rel="stylesheet" href="/static/css/tokens-merged.css">
+  <link rel="stylesheet" href="/static/css/app.css">
+  <link rel="stylesheet" href="/static/css/pages.css">
+  <link rel="stylesheet" href="/static/css/ui-upgrade.css">
+  <link rel="stylesheet" href="/static/css/m1-tables.css">
+  <link rel="stylesheet" href="/static/css/m1-receipt.css">
+  <link rel="stylesheet" href="/static/css/toast.css">
+</head>
+<body>
+
+<!-- Toast 容器 -->
+<div id="toast-container"></div>
+
+<!-- 顶部栏 -->
+<div class="topbar">
+  <div class="brand"><span class="icon">7️⃣</span> 柒号收银 · 桌台管理</div>
+  <div style="flex:1"></div>
+  <a href="/" style="color:rgba(255,255,255,.7);text-decoration:none;padding:8px 16px;border-radius:6px;font-size:14px;"
+     onmouseover="this.style.background='rgba(255,255,255,.1)'"
+     onmouseout="this.style.background=''">
+    ← 返回收银
+  </a>
+</div>
+
+<!-- 主体 -->
+<div class="tables-page-container">
+  <div class="tables-page-toolbar">
+    <button class="btn btn-green" id="btn-create-table">＋ 新建桌台</button>
+    <button class="btn btn-outline" id="btn-layout-toggle">布局编辑</button>
+    <div style="margin-left:auto;display:flex;gap:12px;font-size:12px;color:var(--qh-ink-mute);align-items:center;">
+      <span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:50%;background:#94A3B8;display:inline-block;"></span>空闲</span>
+      <span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:50%;background:#F59E0B;display:inline-block;"></span>就餐中</span>
+      <span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:50%;background:#3B82F6;display:inline-block;"></span>已预留</span>
+      <span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:50%;background:#EF4444;display:inline-block;"></span>待清洁</span>
+    </div>
+  </div>
+
+  <div class="tables-grid" id="tables-grid"></div>
+
+  <div class="tables-empty-standalone" id="tables-empty" style="display:none;">
+    <div style="font-size:64px;opacity:0.4;">🪑</div>
+    <div style="font-size:16px;color:var(--qh-ink-mute);">暂无桌台</div>
+    <button class="btn btn-green" style="margin-top:16px;" onclick="document.getElementById('btn-create-table').click()">
+      ＋ 创建第一个桌台
+    </button>
+  </div>
+</div>
+
+<!-- 脚本 -->
+<script src="/static/js/toast.js"></script>
+<script src="/static/js/qh-modal.js"></script>
+<script src="/static/js/api.js"></script>
+<script src="/static/js/tables-module.js"></script>
+<script src="/static/js/order-detail.js"></script>
+<script>
+  // 独立页面入口
+  (async function () {
+    // 鉴权检查
+    if (!API.getToken()) {
+      window.location.href = '/';
+      return;
+    }
+
+    // 绑定事件
+    document.getElementById('btn-create-table').addEventListener('click', createNewTable);
+    document.getElementById('btn-layout-toggle').addEventListener('click', toggleLayoutEdit);
+
+    // 加载数据
+    await loadTableData();
+  })();
+
+  async function loadTableData() {
+    try {
+      const resp = await API.tables.list();
+      window._tablesCache = resp.items || [];
+    } catch (e) {
+      // Demo data
+      window._tablesCache = [
+        { id: 't1', name: '1号桌', capacity: 4, status: 'empty', pos_x: 0, pos_y: 0 },
+        { id: 't2', name: '2号桌', capacity: 2, status: 'seated', pos_x: 1, pos_y: 0 },
+        { id: 't3', name: '3号桌', capacity: 6, status: 'reserved', pos_x: 2, pos_y: 0 },
+        { id: 't4', name: '4号桌', capacity: 4, status: 'dirty', pos_x: 0, pos_y: 1 },
+        { id: 't5', name: '5号桌', capacity: 8, status: 'empty', pos_x: 1, pos_y: 1 },
+        { id: 't6', name: '6号桌', capacity: 2, status: 'empty', pos_x: 2, pos_y: 1 },
+        { id: 't7', name: '7号桌', capacity: 4, status: 'seated', pos_x: 3, pos_y: 0 },
+        { id: 't8', name: '8号桌', capacity: 4, status: 'empty', pos_x: 3, pos_y: 1 },
+      ];
+    }
+    renderStandaloneGrid();
+  }
+
+  function renderStandaloneGrid() {
+    const grid = document.getElementById('tables-grid');
+    const emptyEl = document.getElementById('tables-empty');
+    const tables = window._tablesCache || [];
+
+    if (tables.length === 0) {
+      grid.innerHTML = '';
+      if (emptyEl) emptyEl.style.display = 'block';
+      return;
+    }
+    if (emptyEl) emptyEl.style.display = 'none';
+
+    grid.innerHTML = '';
+    const statusLabels = { empty: '空闲', seated: '就餐中', reserved: '已预留', dirty: '待清洁' };
+    const statusColors = { empty: '#94A3B8', seated: '#F59E0B', reserved: '#3B82F6', dirty: '#EF4444' };
+    const statusIcons = { empty: '🪑', seated: '🍽️', reserved: '🔖', dirty: '🧹' };
+
+    tables.forEach((t, idx) => {
+      const card = document.createElement('div');
+      card.className = `table-card status-${t.status}`;
+      card.style.setProperty('--table-index', idx);
+      card.setAttribute('role', 'button');
+      card.setAttribute('tabindex', '0');
+
+      const color = statusColors[t.status] || '#94A3B8';
+      card.innerHTML = `
+        <div class="table-card-top">
+          <span class="table-name">${escapeHtml(t.name)}</span>
+          <span class="table-status-dot" style="background:${color}"></span>
+        </div>
+        <div class="table-card-icon">${statusIcons[t.status] || '🪑'}</div>
+        <div class="table-card-meta">
+          <span>${t.capacity} 人座</span>
+          <span class="table-status-label">${statusLabels[t.status] || t.status}</span>
+        </div>
+        ${window._layoutEditMode ? '<div class="table-layout-hint">点击编辑</div>' : ''}
+      `;
+
+      card.addEventListener('click', () => standaloneTableClick(t));
+      card.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); standaloneTableClick(t); }
+      });
+
+      grid.appendChild(card);
+    });
+  }
+
+  async function standaloneTableClick(table) {
+    if (window._layoutEditMode) {
+      editTable(table);
+      return;
+    }
+    switch (table.status) {
+      case 'empty':
+        try { await API.tables.seat(table.id); } catch (e) { /* local */ }
+        table.status = 'seated';
+        Toast.success(`${table.name} 已开台`);
+        renderStandaloneGrid();
+        break;
+      case 'seated':
+        showStandaloneOptions(table);
+        break;
+      case 'reserved':
+        try { await API.tables.seat(table.id); } catch (e) { /* local */ }
+        table.status = 'seated';
+        Toast.success(`${table.name} 已开台`);
+        renderStandaloneGrid();
+        break;
+      case 'dirty':
+        try { await API.tables.clear(table.id); } catch (e) { /* local */ }
+        table.status = 'empty';
+        Toast.success(`${table.name} 已清台`);
+        renderStandaloneGrid();
+        break;
+    }
+  }
+
+  function showStandaloneOptions(table) {
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay visible';
+    overlay.innerHTML = `
+      <div class="modal" style="max-width:360px;">
+        <div class="modal-head">
+          <span>${escapeHtml(table.name)} — 就餐中</span>
+          <button class="close" onclick="this.closest('.modal-overlay').remove()">&times;</button>
+        </div>
+        <div class="modal-body" style="display:flex;flex-direction:column;gap:10px;">
+          <button class="btn btn-outline" style="justify-content:flex-start;padding:14px;"
+                  onclick="OrderDetailModal.show({order_id:'demo_${table.id}',order_no:'DEMO${Date.now().toString().slice(-6)}',table_name:'${escapeHtml(table.name)}',status:'completed',total:5800,items:[{name:'招牌奶茶',spec_text:'大杯,少冰,半糖',qty:2,subtotal:3600},{name:'炸鸡翅',spec_text:'',qty:1,subtotal:2200}]});this.closest('.modal-overlay').remove()">
+            📋 查看订单详情
+          </button>
+          <button class="btn btn-outline" style="justify-content:flex-start;padding:14px;"
+                  onclick="standaloneClearTable('${table.id}');this.closest('.modal-overlay').remove()">
+            💳 结账清台
+          </button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+  }
+
+  async function standaloneClearTable(tableId) {
+    try { await API.tables.clear(tableId); } catch (e) { /* local */ }
+    const t = (window._tablesCache || []).find(x => x.id === tableId);
+    if (t) { t.status = 'empty'; Toast.success('已清台'); renderStandaloneGrid(); }
+  }
+
+  /**
+   * 新建桌台 — 使用自定义 modal 替代原生 prompt
+   * ::code-comment{file:"tables.html", title:"修复 prompt 滥用 → 自定义 modal 表单", priority:0}
+   */
+  function createNewTable() {
+    const overlay = document.createElement('div');
+    overlay.className = 'qh-confirm-overlay';
+    overlay.innerHTML = `
+      <div class="qh-confirm-box" role="dialog" aria-modal="true" aria-label="新建桌台">
+        <div class="qh-confirm-msg" style="text-align:left;font-weight:600;margin-bottom:16px">＋ 新建桌台</div>
+        <div style="margin-bottom:12px">
+          <label style="font-size:13px;color:var(--qh-ink-soft);display:block;margin-bottom:4px">桌台名称</label>
+          <input class="input" id="new-table-name" placeholder="如：7号桌" autofocus>
+        </div>
+        <div style="margin-bottom:20px">
+          <label style="font-size:13px;color:var(--qh-ink-soft);display:block;margin-bottom:4px">座位数</label>
+          <input class="input" id="new-table-capacity" type="number" value="4" min="1" max="20">
+        </div>
+        <div class="qh-confirm-btns">
+          <button class="btn btn-outline" data-act="cancel">取消</button>
+          <button class="btn btn-green" data-act="ok">创建</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+    requestAnimationFrame(() => overlay.classList.add('visible'));
+
+    const nameInput = overlay.querySelector('#new-table-name');
+    const capInput = overlay.querySelector('#new-table-capacity');
+    nameInput.focus();
+
+    const close = () => {
+      overlay.classList.remove('visible');
+      setTimeout(() => overlay.remove(), 200);
+    };
+
+    overlay.querySelector('[data-act="ok"]').addEventListener('click', async () => {
+      const name = nameInput.value.trim();
+      const capacity = parseInt(capInput.value, 10) || 4;
+      if (!name) { Toast.warning('请输入桌台名称'); return; }
+
+      const tables = window._tablesCache || [];
+      try {
+        API.tables.create({ name, capacity, pos_x: tables.length % 4, pos_y: Math.floor(tables.length / 4) });
+      } catch (e) { /* local */ }
+      tables.push({ id: 'tbl_' + Date.now(), name, capacity, status: 'empty', pos_x: tables.length % 4, pos_y: Math.floor(tables.length / 4) });
+      close();
+      Toast.success(`已创建 ${name}`);
+      renderStandaloneGrid();
+    });
+
+    overlay.querySelector('[data-act="cancel"]').addEventListener('click', close);
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+    nameInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') capInput.focus(); });
+    capInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') overlay.querySelector('[data-act="ok"]').click(); });
+    const esc = (e) => { if (e.key === 'Escape') { document.removeEventListener('keydown', esc); close(); } };
+    document.addEventListener('keydown', esc);
+  }
+
+  function toggleLayoutEdit() {
+    window._layoutEditMode = !window._layoutEditMode;
+    const btn = document.getElementById('btn-layout-toggle');
+    if (window._layoutEditMode) {
+      btn.textContent = '✓ 完成编辑';
+      btn.className = 'btn btn-green';
+      Toast.info('点击桌台可编辑属性');
+    } else {
+      btn.textContent = '布局编辑';
+      btn.className = 'btn btn-outline';
+    }
+    renderStandaloneGrid();
+  }
+
+  /**
+   * 编辑桌台 — 使用自定义 modal 替代原生 prompt
+   * ::code-comment{file:"tables.html", title:"修复 prompt 滥用 → 自定义 modal 表单", priority:0}
+   */
+  function editTable(table) {
+    const overlay = document.createElement('div');
+    overlay.className = 'qh-confirm-overlay';
+    overlay.innerHTML = `
+      <div class="qh-confirm-box" role="dialog" aria-modal="true" aria-label="编辑桌台">
+        <div class="qh-confirm-msg" style="text-align:left;font-weight:600;margin-bottom:16px">✏️ 编辑 ${escapeHtml(table.name)}</div>
+        <div style="margin-bottom:12px">
+          <label style="font-size:13px;color:var(--qh-ink-soft);display:block;margin-bottom:4px">桌台名称</label>
+          <input class="input" id="edit-table-name" value="${escapeHtml(table.name)}" autofocus>
+        </div>
+        <div style="margin-bottom:20px">
+          <label style="font-size:13px;color:var(--qh-ink-soft);display:block;margin-bottom:4px">座位数</label>
+          <input class="input" id="edit-table-capacity" type="number" value="${table.capacity}" min="1" max="20">
+        </div>
+        <div class="qh-confirm-btns">
+          <button class="btn btn-outline" data-act="cancel">取消</button>
+          <button class="btn btn-green" data-act="ok">保存</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+    requestAnimationFrame(() => overlay.classList.add('visible'));
+
+    const nameInput = overlay.querySelector('#edit-table-name');
+    const capInput = overlay.querySelector('#edit-table-capacity');
+    nameInput.focus();
+    nameInput.select();
+
+    const close = () => {
+      overlay.classList.remove('visible');
+      setTimeout(() => overlay.remove(), 200);
+    };
+
+    overlay.querySelector('[data-act="ok"]').addEventListener('click', async () => {
+      const name = nameInput.value.trim();
+      const capacity = parseInt(capInput.value, 10) || table.capacity;
+      if (!name) { Toast.warning('请输入桌台名称'); return; }
+
+      try {
+        await API.tables.updateLayout(table.id, { name, capacity });
+      } catch (e) { /* local */ }
+      table.name = name || table.name;
+      table.capacity = capacity || table.capacity;
+      close();
+      Toast.success('桌台已更新');
+      renderStandaloneGrid();
+    });
+
+    overlay.querySelector('[data-act="cancel"]').addEventListener('click', close);
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+    nameInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') capInput.focus(); });
+    capInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') overlay.querySelector('[data-act="ok"]').click(); });
+    const esc = (e) => { if (e.key === 'Escape') { document.removeEventListener('keydown', esc); close(); } };
+    document.addEventListener('keydown', esc);
+  }
+</script>
+
+</body>
+</html>
