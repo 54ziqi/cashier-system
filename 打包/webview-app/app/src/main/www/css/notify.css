@@ -1,0 +1,346 @@
+/**
+ * 柒号收银 — 通知提示组件样式
+ * 基于项目 CSS 变量，统一语义色 / 动效 / 可达性兜底
+ */
+@media (prefers-reduced-motion: reduce) {
+  .notify,
+  .notify-banner,
+  .qh-modal-overlay {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ---------- Toast 容器 ---------- */
+#notify-toast-container {
+  position: fixed;
+  top: 24px;
+  right: 24px;
+  z-index: 10000;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  pointer-events: none;
+}
+
+/* ---------- Toast 基础样式 ---------- */
+.notify {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-radius: var(--qh-radius-lg, 12px);
+  background: var(--qh-surface, rgba(255,255,255,0.95));
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: var(--qh-shadow-lg, 0 10px 30px rgba(0,0,0,0.1));
+  min-width: 280px;
+  max-width: 380px;
+  border-left: 4px solid transparent;
+}
+
+.notify-icon {
+  flex-shrink: 0;
+  color: var(--qh-info, #3b82f6);
+}
+
+.notify-msg {
+  flex: 1;
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--qh-ink, #1f2937);
+  word-break: break-word;
+}
+
+.notify-close {
+  background: none;
+  border: none;
+  font-size: 18px;
+  color: var(--qh-ink-mute, #9ca3af);
+  cursor: pointer;
+  padding: 0 4px;
+}
+.notify-close:hover {
+  color: var(--qh-ink, #1f2937);
+}
+
+/* 语义色变体 */
+.notify-success {
+  border-left-color: var(--qh-success, #10b981);
+}
+.notify-success .notify-icon {
+  color: var(--qh-success, #10b981);
+}
+
+.notify-error {
+  border-left-color: var(--qh-danger, #ef4444);
+}
+.notify-error .notify-icon {
+  color: var(--qh-danger, #ef4444);
+}
+
+.notify-warn {
+  border-left-color: var(--qh-warning, #f59e0b);
+}
+.notify-warn .notify-icon {
+  color: var(--qh-warning, #f59e0b);
+}
+
+.notify-info {
+  border-left-color: var(--qh-info, #3b82f6);
+}
+.notify-info .notify-icon {
+  color: var(--qh-info, #3b82f6);
+}
+
+/* 动作按钮 */
+.notify .btn-ghost {
+  margin-left: 8px;
+  padding: 4px 10px;
+  font-size: 13px;
+}
+
+/* Toast 入场动效 */
+@keyframes notify-in {
+  from {
+    transform: translateX(110%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+.notify-in {
+  animation: notify-in var(--dur-normal, 300ms) var(--ease-spring, cubic-bezier(0.34, 1.56, 0.64, 1)) forwards;
+}
+
+/* Toast 退场动效 */
+@keyframes notify-out {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(110%);
+    opacity: 0;
+  }
+}
+.notify-out {
+  animation: notify-out var(--dur-fast, 200ms) var(--ease-standard, cubic-bezier(0.4, 0, 0.2, 1)) forwards;
+}
+
+/* ---------- Banner 容器 ---------- */
+#notify-banner-container {
+  position: sticky;
+  top: 0;
+  z-index: 9999;
+  width: 100%;
+}
+
+/* ---------- Banner 样式 ---------- */
+.notify-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 12px 24px;
+  background: var(--qh-surface, rgba(255,255,255,0.95));
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: var(--qh-shadow-md, 0 4px 12px rgba(0,0,0,0.08));
+  border-bottom: 1px solid var(--qh-glass-border, rgba(255,255,255,0.2));
+}
+
+.notify-banner-msg {
+  flex: 1;
+  text-align: center;
+  font-size: 14px;
+  color: var(--qh-ink, #1f2937);
+}
+
+.notify-banner-close {
+  background: none;
+  border: none;
+  font-size: 18px;
+  color: var(--qh-ink-mute, #9ca3af);
+  cursor: pointer;
+}
+.notify-banner-close:hover {
+  color: var(--qh-ink, #1f2937);
+}
+
+/* Banner 语义色变体 */
+.notify-banner.notify-success {
+  background: var(var(--qh-success-bg), rgba(16, 185, 129, 0.1));
+  border-bottom-color: var(--qh-success, #10b981);
+}
+.notify-banner.notify-error {
+  background: var(var(--qh-danger-bg), rgba(239, 68, 68, 0.1));
+  border-bottom-color: var(--qh-danger, #ef4444);
+}
+.notify-banner.notify-warn {
+  background: var(var(--qh-warning-bg), rgba(245, 158, 11, 0.1));
+  border-bottom-color: var(--qh-warning, #f59e0b);
+}
+.notify-banner.notify-info {
+  background: var(var(--qh-info-bg), rgba(59, 130, 246, 0.1));
+  border-bottom-color: var(--qh-info, #3b82f6);
+}
+
+/* Banner 入场动效 */
+@keyframes notify-banner-in {
+  from {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+.notify-banner-in {
+  animation: notify-banner-in var(--dur-normal, 300ms) var(--ease-spring, cubic-bezier(0.34, 1.56, 0.64, 1)) forwards;
+}
+
+/* Banner 退场动效 */
+@keyframes notify-banner-out {
+  from {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+}
+.notify-banner-out {
+  animation: notify-banner-out var(--dur-fast, 200ms) var(--ease-standard, cubic-bezier(0.4, 0, 0.2, 1)) forwards;
+}
+
+/* ---------- Suggest 动态建议卡 ---------- */
+.notify-suggest {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: var(--radius-md, 8px);
+  background: var(--qh-surface, rgba(255,255,255,0.95));
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: var(--qh-shadow-md, 0 4px 12px rgba(0,0,0,0.08));
+  border-left: 4px solid var(--qh-primary, #0ea5e9);
+  z-index: 100;
+}
+
+.notify-suggest-msg {
+  flex: 1;
+  font-size: 13px;
+  color: var(--qh-ink-soft, #4b5563);
+}
+
+/* Suggest 入场动效 */
+@keyframes notify-suggest-in {
+  from {
+    transform: translateY(-10px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+.notify-suggest-in {
+  animation: notify-suggest-in var(--dur-fast, 200ms) var(--ease-standard, cubic-bezier(0.4, 0, 0.2, 1)) forwards;
+}
+
+/* Suggest 退场动效 */
+@keyframes notify-suggest-out {
+  from {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateY(-10px);
+    opacity: 0;
+  }
+}
+.notify-suggest-out {
+  animation: notify-suggest-out var(--dur-fast, 200ms) var(--ease-standard, cubic-bezier(0.4, 0, 0.2, 1)) forwards;
+}
+
+/* ---------- Modal 弹窗样式 ---------- */
+.qh-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--glass-overlay, rgba(0,0,0,0.5));
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10001;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--dur-normal, 300ms) var(--ease-standard, cubic-bezier(0.4, 0, 0.2, 1));
+}
+.qh-modal-overlay.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.qh-modal-box {
+  background: var(--qh-surface, rgba(255,255,255,0.98));
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-radius: var(--radius-xl, 16px);
+  box-shadow: var(--qh-shadow-xl, 0 20px 40px rgba(0,0,0,0.12));
+  padding: 24px;
+  min-width: 320px;
+  max-width: 480px;
+  transform: scale(0.9) translateY(20px);
+  transition: transform var(--dur-normal, 300ms) var(--ease-spring, cubic-bezier(0.34, 1.56, 0.64, 1));
+}
+.qh-modal-overlay.visible .qh-modal-box {
+  transform: scale(1) translateY(0);
+}
+
+.qh-modal-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--qh-ink, #1f2937);
+  margin-bottom: 8px;
+}
+
+.qh-modal-msg {
+  font-size: 14px;
+  color: var(--qh-ink-soft, #4b5563);
+  line-height: 1.5;
+  margin-bottom: 16px;
+}
+
+.qh-modal-btns {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+
+.qh-modal-input {
+  width: 100%;
+}
+
+/* 危险按钮动效 */
+.btn-danger {
+  background: var(--qh-danger, #ef4444);
+  color: white;
+  transition: transform var(--dur-fast, 200ms) var(--ease-standard, cubic-bezier(0.4, 0, 0.2, 1));
+}
+.btn-danger:active {
+  transform: scale(0.95);
+}
