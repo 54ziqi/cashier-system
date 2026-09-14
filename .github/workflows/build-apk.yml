@@ -2,85 +2,59 @@ name: Build Cashier System APK
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [main, master]
   workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
-    
+    timeout-minutes: 60
+
+    env:
+      ANDROID_HOME: /usr/local/lib/android/sdk
+      ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v4
-      
+
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
-          java-version: '17'
           distribution: 'temurin'
-          
+          java-version: '17'
+
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
-        
-      - name: Accept SDK licenses & install components
+
+      - name: Install Android SDK components
         run: |
-          yes | sdkmanager --licenses
+          yes | sdkmanager --licenses > /dev/null 2>&1
           sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0" "ndk;25.2.9519653" "cmake;3.22.1"
-          
-      - name: Cache Gradle dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-
-            
-      - name: Make gradlew executable
+
+      - name: Install Gradle 8.2
         run: |
-          cd 打包/apk
-          chmod +x gradlew
-          
+          wget -q https://services.gradle.org/distributions/gradle-8.2-bin.zip -O gradle.zip
+          unzip -q gradle.zip -d /opt/
+          echo "/opt/gradle-8.2/bin" >> $GITHUB_PATH
+          gradle --version
+
       - name: Build debug APK
-        env:
-          ANDROID_HOME: ${{ env.ANDROID_SDK_ROOT }}
-          JAVA_HOME: ${{ env.JAVA_HOME_17_X64 }}
-        run: |
-          cd 打包/apk
-          ./gradlew assembleDebug --no-daemon --stacktrace
-          
-      - name: List APK output
-        run: |
-          find . -name "*.apk" -type f
-          ls -la 打包/apk/app/build/outputs/apk/debug/ 2>/dev/null || echo "APK not found yet"
-          
-      - name: Rename APK
-        id: rename
-        run: |
-          APK_PATH=$(find 打包/apk/app/build/outputs/apk/debug -name "*.apk" -type f | head -1)
-          if [ -z "$APK_PATH" ]; then
-            echo "❌ No APK found!"
-            exit 1
-          fi
-          NEW_NAME="${GITHUB_REPOSITORY_OWNER:-cashier}-debug-${{ github.run_number }}.apk"
-          cp "$APK_PATH" "$NEW_NAME"
-          echo "apk_name=$NEW_NAME" >> $GITHUB_OUTPUT
-          echo "✅ APK renamed to: $NEW_NAME"
-          ls -la "$NEW_NAME"
-          
+        working-directory: 打包/apk
+        run: gradle assembleDebug --no-daemon --stacktrace
+
       - name: Upload APK artifact
+        if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: cashier-debug-apk
-          path: ${{ steps.rename.outputs.apk_name }}
+          name: cashier-system-debug-apk
+          path: 打包/apk/app/build/outputs/apk/debug/*.apk
           retention-days: 30
-          
-      - name: Upload APK as release asset (tag only)
-        if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v2
+
+      - name: Upload build logs
+        if: failure()
+        uses: actions/upload-artifact@v4
         with:
-          files: ${{ steps.rename.outputs.apk_name }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          name: build-logs
+          path: 打包/apk/app/build/
+          retention-days: 7
