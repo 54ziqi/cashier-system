@@ -8,6 +8,18 @@ android {
     namespace = "com.qihhao.pos"
     compileSdk = 34
 
+    signingConfigs {
+        zqiRelease {
+            def storeFilePath = project.findProperty('ZIQI_RELEASE_STORE_FILE') ?: System.getenv('ZIQI_RELEASE_STORE_FILE')
+            if (storeFilePath) {
+                storeFile file(storeFilePath)
+                storePassword project.findProperty('ZIQI_RELEASE_STORE_PASSWORD') ?: System.getenv('ZIQI_RELEASE_STORE_PASSWORD')
+                keyAlias project.findProperty('ZIQI_RELEASE_KEY_ALIAS') ?: System.getenv('ZIQI_RELEASE_KEY_ALIAS')
+                keyPassword project.findProperty('ZIQI_RELEASE_KEY_PASSWORD') ?: System.getenv('ZIQI_RELEASE_KEY_PASSWORD')
+            }
+        }
+    }
+
     defaultConfig {
         applicationId "com.qihhao.pos"
         minSdk = 24
@@ -17,19 +29,28 @@ android {
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
-        // Chaquopy: NDK ABI targets
         ndk {
-            abiFilters "arm64-v8a", "armeabi-v7a", "x86_64"
+            abiFilters "arm64-v8a", "x86_64"
         }
 
-        // Chaquopy: Python source set (project root app/ directory)
-        sourceSets {
-            main {
-                python {
-                    srcDir "../../../../../app"
-                    srcDir "../../../../../config"
-                    srcDir "../../../../../run.py"
-                }
+        // Chaquopy 15.x: pip packages go inside defaultConfig.python
+        python {
+            pip {
+                options "--index-url", "https://mirrors.aliyun.com/pypi/simple/"
+                options "--trusted-host", "mirrors.aliyun.com"
+
+                install "fastapi>=0.115"
+                install "uvicorn[standard]>=0.32"
+                install "pydantic>=2.9"
+                install "pydantic-settings>=2.5"
+                install "sqlalchemy>=2.0.35"
+                install "bcrypt>=4.2"
+                install "cryptography>=43.0"
+                install "tomli>=2.0"
+                install "python-multipart"
+                install "jinja2"
+                install "httpx"
+                install "psutil"
             }
         }
     }
@@ -38,7 +59,11 @@ android {
         release {
             minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-            signingConfig signingConfigs.debug
+            if (project.findProperty('ZIQI_RELEASE_STORE_FILE') ?: System.getenv('ZIQI_RELEASE_STORE_FILE')) {
+                signingConfig signingConfigs.zqiRelease
+            } else {
+                signingConfig signingConfigs.debug
+            }
         }
         debug {
             debuggable true
@@ -68,6 +93,15 @@ android {
     lint {
         abortOnError false
     }
+
+    // Chaquopy: Python source dirs (project root)
+    sourceSets {
+        main {
+            python {
+                srcDir "../../../../../"
+            }
+        }
+    }
 }
 
 dependencies {
@@ -84,13 +118,13 @@ dependencies {
     // WebView
     implementation 'androidx.webkit:webkit:1.9.0'
 
-    // USB Serial for Android (usb-serial-for-android by mik3y)
+    // USB Serial for Android (usb-serial-for-android by mik3y) - needs JitPack
     implementation 'com.github.mik3y:usb-serial-for-android:3.7.0'
 
     // Gson for JSON parsing
     implementation 'com.google.code.gson:gson:2.10.1'
 
-    // OkHttp (for WebSocket / API calls if needed by bridge)
+    // OkHttp
     implementation 'com.squareup.okhttp3:okhttp:4.12.0'
 
     // Coroutines
@@ -103,24 +137,6 @@ dependencies {
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
-}
-
-// Chaquopy: Python dependencies
-python {
-    pip {
-        install "fastapi>=0.115"
-        install "uvicorn[standard]>=0.32"
-        install "pydantic>=2.9"
-        install "pydantic-settings>=2.5"
-        install "sqlalchemy>=2.0.35"
-        install "bcrypt>=4.2"
-        install "cryptography>=43.0"
-        install "tomli>=2.0"
-        install "python-multipart"
-        install "jinja2"
-        install "httpx"
-        install "psutil"
-    }
 }
 
 // Copy static files for embedding
