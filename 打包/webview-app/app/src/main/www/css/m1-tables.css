@@ -1,0 +1,403 @@
+/* ==========================================================================
+   M1 桌台管理样式
+   ========================================================================== */
+
+/* ---- 独立 tables.html 页面容器 ---- */
+.tables-page-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--qh-bg);
+  min-height: 0;
+}
+
+.tables-page-toolbar {
+  padding: 16px 24px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid var(--qh-line);
+  background: var(--qh-surface);
+}
+
+.tables-empty-standalone {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: var(--qh-ink-mute);
+  gap: 8px;
+  font-size: 14px;
+}
+
+/* ---- 桌台管理容器 ---- */
+.tables-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.tables-toolbar {
+  padding: 16px 24px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid var(--qh-line);
+  background: var(--qh-surface);
+}
+
+.tables-toolbar .table-legend {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.tables-toolbar .legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+/* ---- 桌台网格 ---- */
+.tables-grid {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 16px;
+  align-content: start;
+}
+
+.tables-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: var(--qh-ink-mute);
+  gap: 8px;
+  font-size: 14px;
+}
+
+.tables-empty .icon {
+  font-size: 56px;
+  opacity: 0.4;
+}
+
+/* ---- 桌台卡片 ---- */
+.table-card {
+  --table-color: #94A3B8;
+  background: var(--qh-surface);
+  border: 2px solid var(--qh-line);
+  border-radius: 16px;
+  padding: 16px;
+  cursor: pointer;
+  transition: all var(--qh-dur-sm, 0.25s) var(--qh-ease-spring, cubic-bezier(.34, 1.56, .64, 1));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+  overflow: hidden;
+  animation: cardSlideIn var(--qh-dur-md, 0.4s) var(--qh-ease-standard, ease) forwards;
+  animation-delay: calc(var(--table-index, 0) * 0.05s);
+  opacity: 0;
+}
+
+.table-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--qh-shadow-3);
+}
+
+.table-card.status-empty {
+  --table-color: #94A3B8;
+}
+.table-card.status-seated {
+  --table-color: #F59E0B;
+}
+.table-card.status-reserved {
+  --table-color: #3B82F6;
+}
+.table-card.status-dirty {
+  --table-color: #EF4444;
+}
+
+.table-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  margin-bottom: 4px;
+}
+
+.table-name {
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--qh-ink);
+}
+
+.table-status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--table-color);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--table-color) 20%, transparent);
+}
+
+.table-card-icon {
+  font-size: 40px;
+  margin: 8px 0;
+}
+
+.table-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 12px;
+  color: var(--qh-ink-mute);
+}
+
+.table-status-label {
+  color: var(--table-color);
+  font-weight: 600;
+}
+
+.table-layout-hint {
+  position: absolute;
+  bottom: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 10px;
+  color: var(--qh-ink-mute);
+  background: var(--qh-bg);
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+/* ---- 取餐号 Banner ---- */
+.pickup-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10000;
+  background: linear-gradient(90deg, #0EA5E9 0%, #6366F1 100%);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 12px 24px;
+  font-size: 16px;
+  font-weight: 600;
+  box-shadow: 0 4px 16px rgba(14, 165, 233, 0.3);
+  animation: slideDown 0.3s ease;
+}
+
+.pickup-banner .pickup-icon {
+  font-size: 22px;
+}
+
+.pickup-banner strong {
+  font-size: 22px;
+  font-weight: 800;
+}
+
+.pickup-banner .pickup-close {
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: #fff;
+  font-size: 18px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@keyframes slideDown {
+  from { transform: translateY(-100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+/* ---- 订单详情 Modal ---- */
+.order-detail-modal {
+  width: 560px;
+  max-width: 95vw;
+}
+
+.order-detail-body {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.order-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.order-meta-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.meta-label {
+  font-size: 12px;
+  color: var(--qh-ink-mute);
+  font-weight: 500;
+}
+
+.meta-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--qh-ink);
+}
+
+.meta-value.queue-no {
+  color: var(--qh-info);
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 3px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.status-badge.status-pending { background: #FEF3C7; color: #92400E; }
+.status-badge.status-completed { background: #D1FAE5; color: #065F46; }
+.status-badge.status-making { background: #DBEAFE; color: #1E40AF; }
+.status-badge.status-ready { background: #EDE9FE; color: #5B21B6; }
+.status-badge.status-voided { background: #FEE2E2; color: #991B1B; }
+
+/* ---- 商品明细 ---- */
+.order-items-section {
+  background: var(--qh-surface-hover);
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.order-section-title {
+  font-weight: 600;
+  font-size: 14px;
+  margin-bottom: 12px;
+  color: var(--qh-ink);
+}
+
+.order-items-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.order-item-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.oi-name {
+  flex: 1;
+  font-weight: 500;
+}
+
+.oi-spec {
+  display: block;
+  font-size: 11px;
+  color: var(--qh-ink-mute);
+  font-weight: 400;
+}
+
+.oi-qty {
+  color: var(--qh-ink-mute);
+  min-width: 30px;
+  text-align: center;
+}
+
+.oi-subtotal {
+  font-weight: 700;
+  color: var(--qh-ink);
+  min-width: 70px;
+  text-align: right;
+}
+
+.order-items-total {
+  display: flex;
+  justify-content: space-between;
+  padding-top: 12px;
+  border-top: 1px dashed var(--qh-line);
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--qh-green-strong);
+}
+
+/* ---- 状态流转 ---- */
+.order-transitions {
+  padding: 12px 16px;
+  background: var(--qh-info-bg);
+  border-radius: 12px;
+}
+
+.order-transitions-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--qh-info-text);
+  margin-bottom: 10px;
+}
+
+.order-transition-btns {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.order-transition-btn {
+  flex: 1;
+  min-width: 120px;
+}
+
+.btn-amber { background: var(--qh-warning); color: #fff; }
+.btn-amber:hover { background: #D97706; }
+
+/* ---- 操作行 ---- */
+.order-actions-row {
+  display: flex;
+  gap: 8px;
+}
+
+.order-actions-row .btn {
+  flex: 1;
+}
+
+/* ---- 购物车规格文本 ---- */
+.cart-item-spec {
+  font-size: 11px;
+  color: var(--qh-info);
+  font-weight: 500;
+  margin-top: 2px;
+}
+
+/* ---- 减少动效 ---- */
+@media (prefers-reduced-motion: reduce) {
+  .table-card { animation: none; opacity: 1; }
+  .pickup-banner { animation: none; }
+}
