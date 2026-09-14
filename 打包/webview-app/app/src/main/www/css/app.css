@@ -1,0 +1,304 @@
+/* ⚠ 此文件中的 :root 定义已迁移到 tokens-merged.css 
+   app.css 仅保留组件级样式 */
+
+/* ============ Reset & 基础 ============ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overflow: hidden; }
+body {
+  font-family: var(--font);
+  background: var(--c-bg);
+  color: var(--c-text);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+input, button, select, textarea {
+  font-family: inherit;
+  font-size: inherit;
+  outline: none;
+}
+button { cursor: pointer; border: none; background: none; }
+a { color: inherit; text-decoration: none; }
+ul { list-style: none; }
+
+/* ============ 通用类 ============ */
+.flex { display: flex; }
+.items-center { align-items: center; }
+.justify-between { justify-content: space-between; }
+.justify-center { justify-content: center; }
+.gap-1 { gap: var(--sp-1); }
+.gap-2 { gap: var(--sp-2); }
+.gap-3 { gap: var(--sp-3); }
+.gap-4 { gap: var(--sp-4); }
+.rounded { border-radius: var(--r-md); }
+.text-secondary { color: var(--c-text-secondary); }
+.text-muted { color: var(--c-text-muted); }
+.text-green { color: var(--c-green); }
+.text-amber { color: var(--c-amber); }
+.text-red { color: var(--c-red); }
+.font-mono { font-family: "SF Mono", "Consolas", "Monaco", monospace; }
+
+/* ============ 顶栏 ============ */
+.topbar {
+  height: 56px;
+  background: var(--c-primary);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  padding: 0 var(--sp-5);
+  gap: var(--sp-4);
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(0,0,0,.15);
+  z-index: 100;
+}
+.topbar .brand {
+  font-size: 18px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin-right: var(--sp-4);
+}
+.topbar .brand .icon { font-size: 22px; }
+.topbar .time {
+  font-feature-settings: "tnum";
+  font-size: 15px;
+  opacity: .85;
+  margin-right: auto;
+}
+.topbar .nav {
+  display: flex;
+  gap: 2px;
+}
+.topbar .nav button {
+  padding: 8px 18px;
+  color: rgba(255,255,255,.7);
+  border-radius: var(--r-sm);
+  font-size: 14px;
+  transition: all .15s;
+}
+.topbar .nav button:hover {
+  background: rgba(255,255,255,.1);
+  color: #fff;
+}
+.topbar .nav button.active {
+  background: var(--c-green);
+  color: #fff;
+  font-weight: 600;
+}
+.topbar .user {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: 13px;
+  opacity: .9;
+}
+.topbar .user .dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--c-green);
+}
+
+/* ============ 硬件状态条 ============ */
+.hw-bar {
+  height: 36px;
+  background: var(--c-bg-card);
+  border-bottom: 1px solid var(--c-border);
+  display: flex;
+  align-items: center;
+  padding: 0 var(--sp-5);
+  gap: var(--sp-4);
+  flex-shrink: 0;
+  overflow-x: auto;
+}
+.hw-bar::-webkit-scrollbar { height: 0; }
+.hw-item {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: 13px;
+  color: var(--c-text-secondary);
+  white-space: nowrap;
+  padding: 4px 10px;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  transition: background .15s;
+}
+.hw-item:hover { background: var(--c-bg-hover); }
+.hw-item .dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  flex-shrink: 0;
+}
+.hw-item .dot.online { background: var(--c-green); box-shadow: 0 0 0 2px rgba(16,185,129,.2); }
+.hw-item .dot.offline { background: var(--c-text-muted); }
+.hw-item .dot.warning { background: var(--c-amber); }
+.hw-item .name { font-weight: 500; }
+
+/* ============ 主内容区 ============ */
+.main {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.page {
+  display: none;
+  flex: 1;
+  overflow: hidden;
+}
+.page.active { display: flex; }
+
+/* ============ 卡片 ============ */
+.card {
+  background: var(--c-bg-card);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--c-border);
+}
+.card-header {
+  padding: var(--sp-4) var(--sp-5);
+  border-bottom: 1px solid var(--c-border-light);
+  font-weight: 600;
+  font-size: 15px;
+}
+.card-body { padding: var(--sp-5); }
+
+/* ============ 按钮 ============ */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  padding: 9px 20px;
+  border-radius: var(--r-sm);
+  font-weight: 600;
+  font-size: 14px;
+  transition: all .15s;
+  white-space: nowrap;
+}
+.btn:active { transform: scale(.97); }
+.btn-primary { background: var(--c-primary); color: #fff; }
+.btn-primary:hover { background: var(--c-primary-light); }
+.btn-green { background: var(--c-green); color: #fff; }
+.btn-green:hover { background: var(--c-green-dark); }
+.btn-amber { background: var(--c-amber); color: #fff; }
+.btn-amber:hover { background: #D97706; }
+.btn-red { background: var(--c-red); color: #fff; }
+.btn-red:hover { background: #DC2626; }
+.btn-outline {
+  background: transparent;
+  border: 1.5px solid var(--c-border);
+  color: var(--c-text);
+}
+.btn-outline:hover { background: var(--c-bg-hover); border-color: var(--c-text-muted); }
+.btn-lg { padding: 12px 28px; font-size: 15px; }
+.btn-block { width: 100%; }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+
+/* ============ 输入框 ============ */
+.input {
+  width: 100%;
+  padding: 9px 14px;
+  border: 1.5px solid var(--c-border);
+  border-radius: var(--r-sm);
+  background: #fff;
+  transition: border-color .15s, box-shadow .15s;
+  font-size: 14px;
+}
+.input:focus {
+  border-color: var(--c-green);
+  box-shadow: 0 0 0 3px rgba(16,185,129,.15);
+}
+.input::placeholder { color: var(--c-text-muted); }
+
+/* ============ 登录页 ============ */
+.login-wrap {
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--c-primary) 0%, #1a365d 50%, var(--c-primary-light) 100%);
+  position: relative;
+  overflow: hidden;
+}
+.login-wrap::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -30%;
+  width: 800px;
+  height: 800px;
+  background: radial-gradient(circle, rgba(16,185,129,.08) 0%, transparent 70%);
+  border-radius: 50%;
+}
+.login-wrap::after {
+  content: '';
+  position: absolute;
+  bottom: -40%;
+  left: -20%;
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, rgba(59,130,246,.06) 0%, transparent 70%);
+  border-radius: 50%;
+}
+.login-card {
+  background: rgba(255,255,255,.98);
+  backdrop-filter: blur(20px);
+  border-radius: var(--r-xl);
+  padding: var(--sp-10) var(--sp-8);
+  width: 400px;
+  box-shadow: var(--shadow-xl);
+  position: relative;
+  z-index: 1;
+}
+.login-card .brand {
+  text-align: center;
+  margin-bottom: var(--sp-8);
+}
+.login-card .brand .logo {
+  font-size: 42px;
+  margin-bottom: var(--sp-3);
+}
+.login-card .brand h1 {
+  font-size: 22px;
+  color: var(--c-primary);
+  margin-bottom: var(--sp-1);
+}
+.login-card .brand .sub {
+  font-size: 13px;
+  color: var(--c-text-muted);
+}
+.login-card .field {
+  margin-bottom: var(--sp-4);
+}
+.login-card .field label {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--c-text-secondary);
+  margin-bottom: var(--sp-2);
+}
+.login-card .field .input {
+  padding: 11px 14px;
+  font-size: 15px;
+}
+.login-card .btn-login {
+  width: 100%;
+  padding: 12px;
+  font-size: 15px;
+  margin-top: var(--sp-2);
+  background: var(--c-green);
+  color: #fff;
+  border-radius: var(--r-sm);
+  font-weight: 600;
+  transition: background .15s;
+}
+.login-card .btn-login:hover { background: var(--c-green-dark); }
+.login-card .btn-login:active { transform: scale(.98); }
+.login-card .health {
+  margin-top: var(--sp-5);
+  text-align: center;
+  font-size: 12px;
+  color: var(--c-text-muted);
+}
+
+/* ============ Toast 样式 — 由 toast.css 统一提供（app.css 不重复定义） ============ */
