@@ -1,0 +1,150 @@
+/* ==========================================================================
+   柒号收银系统 — 品牌化 Toast 组件
+   ----------------------------------------------------------------------
+   · 依赖 design token: --qh-* （brand.css 已就绪时生效）
+   · 四种语义: success / error / warning / info
+   · 形态:    右上角 slide-in + 自动消失进度条 + 图标
+   · 纯 CSS 驱动；JS 仅负责外容器存在与 close 类名挂载
+   ========================================================================== */
+
+#toast-container {
+  position: fixed;
+  top: 0;
+  right: 0;
+  z-index: 90000;
+  display: flex;
+  flex-direction: column;
+  gap: var(--qh-g3, 12px);
+  padding: var(--qh-g4, 16px);
+  pointer-events: none;
+}
+
+/* ---- Toast 本体 ---- */
+.toast {
+  --_toast-bg:    var(--qh-ink);
+  --_toast-text:  #FFFFFF;
+  --_toast-icon:  "ℹ";
+  --_toast-bar:   rgba(255,255,255,.45);
+
+  min-width: 300px;
+  max-width: 420px;
+  padding: 0;                     /* 拆出 bar 槽位 */
+  border-radius: var(--qh-r-md, 12px);
+  background: var(--_toast-bg);
+  color: var(--_toast-text);
+  font-family: var(--qh-ff);
+  font-size: var(--qh-fs-body);
+  font-weight: 500;
+  box-shadow: var(--qh-shadow-3);
+  overflow: hidden;
+  pointer-events: auto;
+
+  /* 入场动画 */
+  animation:
+    toast-slide-in  .35s var(--qh-ease-ease-out, ease) both,
+    toast-bar-shrink 3s  linear             forwards;
+  cursor: pointer;
+  display: flex;
+  align-items: stretch;
+}
+
+/* 关闭态 — JS 挂 .closing */
+.toast.closing {
+  animation: toast-slide-out .25s var(--qh-ease-standard, ease) forwards;
+}
+
+/* ---- 内容区 ---- */
+.toast-body {
+  display: flex;
+  align-items: center;
+  gap: var(--qh-g3, 12px);
+  padding: var(--qh-g3, 12px) var(--qh-g4, 16px);
+  flex: 1;
+}
+
+.toast-icon {
+  flex-shrink: 0;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.toast-msg {
+  flex: 1;
+  line-height: 1.5;
+}
+
+.toast-close {
+  flex-shrink: 0;
+  margin-left: var(--qh-g2, 8px);
+  opacity: .6;
+  font-size: 16px;
+  font-weight: 700;
+  padding: 0 4px;
+  background: border-box;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  transition: opacity var(--qh-dur-fast);
+}
+.toast-close:hover { opacity: 1; }
+
+/* ---- 进度条（绝对定位在底部，不影响内边距） ---- */
+.toast-bar {
+  height: 3px;
+  background: var(--_toast-bar);
+  transform-origin: left;
+  will-change: transform;
+}
+
+/* ---- 类型变体 ---- */
+.toast.success {
+  --_toast-bg:    var(--qh-success);
+  --_toast-icon:  "✓";
+}
+.toast.error {
+  --_toast-bg:    var(--qh-danger);
+  --_toast-icon:  "✕";
+}
+.toast.warning {
+  --_toast-bg:    var(--qh-highlight);
+  --_toast-text:  #422006;
+  --_toast-icon:  "⚠";
+}
+.toast.info {
+  --_toast-bg:    var(--qh-info);
+  --_toast-icon:  "ℹ";
+}
+/* 警告条进度用深色，因为 --_toast-text 也变深 */
+.toast.warning .toast-bar {
+  --_toast-bar:  rgba(0,0,0,.2);
+}
+
+/* ---- Keyframes ---- */
+@keyframes toast-slide-in {
+  from { opacity: 0; transform: translateX(60px) scale(.96); }
+  to   { opacity: 1; transform: translateX(0)    scale(1); }
+}
+@keyframes toast-slide-out {
+  to {
+    opacity: 0;
+    transform: translateX(40px);
+    margin-top: calc(-1 * (var(--qh-g3, 12px) + 100%)); /* 收起高度 */
+    max-height: 0;
+    padding: 0;
+    overflow: hidden;
+  }
+}
+@keyframes toast-bar-shrink {
+  from { transform: scaleX(1); }
+  to   { transform: scaleX(0); }
+}
+
+/* ---- 减少动效 ---- */
+@media (prefers-reduced-motion: reduce) {
+  .toast,
+  .toast.closing,
+  .toast .toast-bar {
+    animation: none !important;
+    transition-duration: .01ms !important;
+  }
+}

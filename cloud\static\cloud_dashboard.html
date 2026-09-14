@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>柒号收银 · 云端数据看板</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+  :root{
+    --c-primary:#0F172A;--c-green:#10B981;--c-amber:#F59E0B;--c-blue:#0EA5E9;--c-red:#EF4444;
+    --c-ink:#1F2937;--c-text:#334155;--c-muted:#94A3B8;--c-bg:#F8FAFC;--c-surface:#FFFFFF;
+    --shadow:0 1px 3px rgba(0,0,0,.08);--shadow-md:0 4px 12px rgba(0,0,0,.1);
+    --radius:12px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,sans-serif;background:var(--c-bg);color:var(--c-ink);}
+  .wrap{max-width:1280px;margin:0 auto;padding:24px}
+
+  header.top{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:20px 28px;background:var(--c-surface);border-radius:var(--radius);
+    box-shadow:var(--shadow);margin-bottom:20px;
+  }
+  header.top h1{font-size:22px;color:var(--c-primary)}
+  header.top .sub{color:var(--c-muted);font-size:13px;margin-top:4px;}
+  .ws-pill{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--c-muted)}
+  .ws-dot{width:8px;height:8px;border-radius:50%;background:var(--c-muted);transition:background .3s}
+  .ws-dot.on{background:var(--c-green)}
+  .ws-dot.off{background:var(--c-red)}
+
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-bottom:20px}
+  .stat{background:var(--c-surface);padding:20px;border-radius:var(--radius);box-shadow:var(--shadow)}
+  .stat .label{font-size:12px;color:var(--c-muted);margin-bottom:6px}
+  .stat .val{font-size:28px;font-weight:700;color:var(--c-primary)}
+  .stat .val.green{color:var(--c-green)}
+
+  .panel{background:var(--c-surface);padding:24px;border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:20px}
+  .panel h2{font-size:16px;color:var(--c-primary);margin-bottom:16px}
+  .chart-box{position:relative;height:300px}
+
+  .tab-bar{display:flex;gap:4px;margin-bottom:20px;border-bottom:1px solid #E2E8F0}
+  .tab{padding:10px 20px;font-size:14px;font-weight:600;color:var(--c-muted);cursor:pointer;border-bottom:2px solid transparent;transition:.15s}
+  .tab.active{color:var(--c-green);border-bottom-color:var(--c-green)}
+
+  table{width:100%;border-collapse:collapse}
+  th,td{text-align:left;padding:10px 14px;font-size:14px}
+  th{color:var(--c-muted);font-weight:600;font-size:12px;text-transform:uppercase}
+  tr{border-bottom:1px solid #F1F5F9}
+  tr:last-child{border-bottom:none}
+  .store-name{font-weight:600;color:var(--c-primary)}
+
+  .loading{text-align:center;color:var(--c-muted);padding:60px 0}
+  .empty{text-align:center;color:var(--c-muted);padding:40px 0;font-size:14px}
+
+  .join-form{display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap}
+  input,button,select{font-family:inherit;font-size:14px;padding:10px 16px;border-radius:8px;border:1px solid #CBD5E1}
+  input:focus,select:focus{outline:none;border-color:var(--c-green);box-shadow:0 0 0 3px rgba(16,185,129,.15)}
+  button{background:var(--c-green);color:#fff;border:none;cursor:pointer;font-weight:600;transition:.15s}
+  button:hover{background:#059669}
+  button:active{transform:scale(.96)}
+
+  .toast{position:fixed;top:20px;right:20px;background:var(--c-primary);color:#fff;padding:12px 20px;border-radius:8px;font-size:14px;box-shadow:var(--shadow-md);z-index:9999;animation:slideIn .3s}
+  @keyframes slideIn{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:none}}
+
+  @media(max-width:720px){
+    .cards{grid-template-columns:1fr 1fr}
+    header.top{flex-direction:column;align-items:flex-start;gap:10px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>📊 柒号收银 · 云端数据看板</h1>
+      <p class="sub">连锁门店实时聚合 · 双向同步 · 防篡改签名</p>
+    </div>
+    <div class="ws-pill">
+      <span class="ws-dot off" id="ws-dot"></span>
+      <span id="ws-label">离线</span>
+    </div>
+  </header>
+
+  <!-- 鉴权面板 -->
+  <div id="auth-panel" class="panel" style="display:none">
+    <h2>🔐 连锁账户登录</h2>
+    <p style="color:#64748B;margin-bottom:16px;font-size:14px;">使用 License 激活码登录云端账户，首批用户自动获得管理权限。</p>
+    <div class="join-form">
+      <input id="auth-key" placeholder="License Activation Key" style="flex:1;min-width:300px">
+      <button onclick="cloudAuth()">登录</button>
+    </div>
+  </div>
+
+  <!-- 主看板 -->
+  <div id="dash" style="display:none">
+
+    <!-- 筛选栏 -->
+    <div class="join-form">
+      <select id="store-select" onchange="refreshCurrent()">
+        <option value="__all__">所有门店</option>
+      </select>
+      <select id="range-select" onchange="refreshCurrent()">
+        <option value="7">近 7 天</option>
+        <option value="30" selected>近 30 天</option>
+        <option value="90">近 90 天</option>
+      </select>
+      <button onclick="refreshCurrent()">↻ 刷新</button>
+    </div>
+
+    <!-- 统计卡片 -->
+    <div class="cards">
+      <div class="stat"><div class="label">汇总销售额</div><div class="val green" id="m-total">¥0</div></div>
+      <div class="stat"><div class="label">总订单数</div><div class="val" id="m-orders">0</div></div>
+      <div class="stat"><div class="label">门店数</div><div class="val" id="m-stores">0</div></div>
+      <div class="stat"><div class="label">客单价</div><div class="val" id="m-avg">¥0</div></div>
+    </div>
+
+    <!-- Tab -->
+    <div class="tab-bar">
+      <div class="tab active" data-tab="trend" onclick="switchTab('trend',this)">📈 趋势</div>
+      <div class="tab" data-tab="stores" onclick="switchTab('stores,this')" id="tab-stores">🏪 门店对比</div>
+      <div class="tab" data-tab="tenants" onclick="switchTab('tenants,this')" id="tab-tenants">👥 租户列表</div>
+    </div>
+
+    <!-- 趋势 -->
+    <div class="panel tab-pane" data-pane="trend">
+      <h2>销售趋势（按日）</h2>
+      <div class="chart-box"><canvas id="chart-trend"></canvas></div>
+    </div>
+
+    <!-- 门店对比 -->
+    <div class="tab-pane" data-pane="stores" style="display:none">
+      <div class="panel">
+        <h2>门店排行</h2>
+        <div class="chart-box"><canvas id="chart-stores"></canvas></div>
+      </div>
+      <div class="panel" style="margin-top:20px">
+        <h2>明细</h2>
+        <table id="stores-table">
+          <thead><tr><th>排名</th><th>门店</th><th>销售额</th><th>订单数</th><th>占比</th></tr>
+          <tbody id="stores-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 租户 -->
+    <div class="tab-pane" data-pane="tenants" style="display:none">
+      <div class="panel">
+        <h2>已注册门店</h2>
+        <table>
+          <thead><tr><th>门店名</th><th>ID</th><th>等级</th><th>最后上线</th></tr>
+          <tbody id="tenants-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div><!-- /dash -->
+</div>
+
+<script>
+const API       = window.__CLOUD_API__ || "";
+let   token     = localStorage.getItem("cloud_token") || "";
+let   ws        = null;
+let   charts    = {};
+
+// ── 鉴权 ────────────────────────────────────────────────────────────
+
+if (!token) {
+  document.getElementById("auth-panel").style.display = "block";
+}
+
+async function cloudAuth() {
+  const key = document.getElementById("auth-key").value.trim();
+  if (!key) return toast("请输入激活码");
+  token = key;
+  localStorage.setItem("cloud_token", key);
+  document.getElementById("auth-panel").style.display = "none";
+  document.getElementById("dash").style.display = "block";
+  await boot();
+  connectWS(key);
+}
+
+// ── WebSocket 双向推送 ──────────────────────────────────────────────
+
+function connectWS(room) {
+  const proto = location.protocol === "https:" ? "wss:" : "ws:";
+  ws = new WebSocket(`${proto}//${location.host}/cloud/ws/${room}`);
+  ws.onopen = () => {
+    document.getElementById("ws-dot").className = "ws-dot on";
+    document.getElementById("ws-label").textContent = "实时在线";
+  };
+  ws.onclose = () => {
+    document.getElementById("ws-dot").className = "ws-dot off";
+    document.getElementById("ws-label").textContent = "离线";
+    // 自动重连
+    if (token) setTimeout(() => connectWS(room), 3000);
+  };
+  ws.onmessage = (e) => {
+    try {
+      const msg = JSON.parse(e.data);
+      if (msg.type === "digest.new") {
+        toast(`📈 ${msg.data.store_name} 新数据入库`);
+        refreshCurrent();
+      }
+    } catch {}
+  };
+  ws.onerror = () => {
+    document.getElementById("ws-label").textContent = "连接失败";
+  };
+}
+
+// ── API 调用 ────────────────────────────────────────────────────────
+
+async function api(path, opts={}) {
+  const h = { "Authorization": `Bearer ${token}` };
+  if (opts.body) h["Content-Type"] = "application/json";
+  const r = await fetch(API + path, { headers: h, ...opts });
+  if (r.status === 401 || r.status === 403) {
+    localStorage.removeItem("cloud_token");
+    location.reload();
+    return;
+  }
+  return r.json();
+}
+
+// ── Tab 切换 ────────────────────────────────────────────────────────
+
+function switchTab(name, el) {
+  document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+  el.classList.add("active");
+  document.querySelectorAll(".tab-pane").forEach(p => {
+    p.style.display = p.dataset.pane === name ? "block" : "none";
+  });
+  refreshCurrent();
+}
+
+// ── 刷新 ────────────────────────────────────────────────────────────
+
+let currentRange = 30;
+let currentData  = null;
+
+async function refreshCurrent() {
+  if (!token) return;
+  currentRange = parseInt(document.getElementById("range-select").value, 10);
+  await loadSummary();
+}
+
+async function loadSummary() {
+  const storeSel = document.getElementById("store-select");
+  const selVal   = storeSel ? storeSel.value : "__all__";
+
+  let summary;
+  if (selVal === "__all__") {
+    summary = await api(`/cloud/v1/chain/${encodeURIComponent(token)}/summary?days=${currentRange}`);
+  } else {
+    summary = await api(`/cloud/v1/dashboard/${encodeURIComponent(selVal)}?days=${currentRange}`);
+  }
+  if (!summary) return;
+  currentData = summary;
+
+  // 卡片
+  const ranking = summary.ranking || [];
+  const totalRev  = ranking.reduce((s, r) => s + (r.revenue || 0), 0);
+  const totalCnt  = ranking.reduce((s, r) => s + (r.count || 0), 0);
+  document.getElementById("m-total").textContent = "¥" + (totalRev / 100).toFixed(2);
+  document.getElementById("m-orders").textContent = totalCnt;
+  document.getElementById("m-stores").textContent = ranking.length;
+  document.getElementById("m-avg").textContent = totalCnt ? "¥" + (totalRev / totalCnt / 100).toFixed(2) : "¥0";
+
+  renderTrendChart(summary.series || []);
+  renderStoresChart(ranking);
+  renderStoresTable(ranking, totalRev);
+}
+
+// ── 图表 ────────────────────────────────────────────────────────────
+
+function renderTrendChart(series) {
+  const ctx = document.getElementById("chart-trend");
+  const labels = series.map(p => p.date.slice(5));
+  const revs    = series.map(p => (p.revenue || 0) / 100);
+  const cnts    = series.map(p => p.count || 0);
+  if (charts.trend) charts.trend.destroy();
+  charts.trend = new Chart(ctx, {
+    type: "line",
+    data: {
+      labels,
+      datasets: [
+        { label: "销售额(元)", data: revs, borderColor: "#10B981", backgroundColor: "rgba(16,185,129,.1)", fill: true, tension: .3, yAxisID: "y" },
+        { label: "订单数", data: cnts, borderColor: "#0EA5E9", tension: .3, yAxisID: "y1" },
+      ],
+    },
+    options: { responsive: true, maintainAspectRatio: false, interaction: { mode: "index", intersect: false }, scales: { y: { beginAtZero: true }, y1: { position: "right", grid: { drawOnChartArea: false } } } },
+  });
+}
+
+function renderStoresChart(ranking) {
+  const ctx = document.getElementById("chart-stores");
+  if (charts.stores) charts.stores.destroy();
+  charts.stores = new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels: ranking.map(r => r.store_name || r.merchant_id),
+      datasets: [{ label: "销售额(元)", data: ranking.map(r => (r.revenue || 0) / 100), backgroundColor: "#10B981" }],
+    },
+    options: { indexAxis: "y", responsive: true, maintainAspectRatio: false },
+  });
+}
+
+function renderStoresTable(ranking, totalRev) {
+  const tbody = document.getElementById("stores-tbody");
+  tbody.innerHTML = ranking.map((r, i) => {
+    const ratio = totalRev ? ((r.revenue || 0) / totalRev * 100).toFixed(1) : "0.0";
+    return `<tr><td>${i + 1}</td><td class="store-name">${escapeHtml(r.store_name || r.merchant_id)}</td><td>¥${((r.revenue || 0) / 100).toFixed(2)}</td><td>${r.count || 0}</td><td>${ratio}%</td></tr>`;
+  }).join("");
+}
+
+// ── 租户列表 ────────────────────────────────────────────────────────
+
+async function loadTenants() {
+  const data = await api("/cloud/v1/tenants");
+  if (!data) return;
+  const tbody = document.getElementById("tenants-tbody");
+  tbody.innerHTML = data.map(t => `<tr><td class="store-name">${escapeHtml(t.store_name)}</td><td style="color:#94A3B8;font-family:monospace;font-size:12px">${t.tenant_id.slice(0,12)}...</td><td>${t.tier}</td><td>${(t.last_seen||"").slice(0,19).replace("T"," ")}</td></tr>`).join("");
+}
+
+// ── 工具 ────────────────────────────────────────────────────────────
+
+function escapeHtml(s){const d=document.createElement("div");d.textContent=s;return d.innerHTML}
+function toast(msg){const d=document.createElement("div");d.className="toast";d.textContent=msg;document.body.appendChild(d);setTimeout(()=>d.remove(),3000)}
+
+// ── 启动 ────────────────────────────────────────────────────────────
+
+async function boot() {
+  await loadSummary();
+  await loadTenants();
+  updateStoreSelect();
+}
+
+function updateStoreSelect() {
+  if (!currentData || !currentData.ranking) return;
+  const sel = document.getElementById("store-select");
+  sel.innerHTML = '<option value="__all__">所有门店</option>' +
+    currentData.ranking.map(r => `<option value="${r.merchant_id}">${escapeHtml(r.store_name || r.merchant_id)}</option>`).join("");
+}
+</script>
+
+<script>
+  // 自动登录：若本地已有 token
+  if (token) {
+    document.getElementById("dash").style.display = "block";
+    boot();
+    connectWS(token);
+  }
+</script>
+</body>
+</html>

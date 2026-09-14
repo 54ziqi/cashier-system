@@ -1,0 +1,315 @@
+/* ==========================================================================
+   柒号收银系统 — 统一设计令牌 tokens-merged.css
+   合并来源: app.css(--c-*) + brand.css(--qh-*) + brand-extend.css(--color-*)
+   命名空间: --qh-* 为唯一权威; --c-*/--sp-*/--r-*/--shadow-* 向后兼容
+   ========================================================================== */
+
+:root {
+  /* ━━ 1. 文字层级 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+  --qh-ink:           #0F172A;    /* 一级正文 */
+  --qh-ink-soft:      #475569;    /* 次级文字 */
+  --qh-ink-mute:      #94A3B8;    /* 占位/注释 */
+  --qh-ink-inverse:   #FFFFFF;    /* 暗底白字 */
+
+  /* ━━ 2. 背景/卡片层级 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+  --qh-bg:            #F1F5F9;    /* 页面底色 slate-100 */
+  --qh-surface:       #FFFFFF;    /* 卡片/弹窗 */
+  --qh-surface-alt:   #F8FAFC;    /* 斑马纹/表头 */
+  --qh-surface-hover: #F1F5F9;    /* 悬浮态 */
+
+  /* ━━ 3. 边框/分割线 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+  --qh-line:          #E2E8F0;    /* 默认分割线 */
+  --qh-line-soft:     #F1F5F9;    /* 淡分割线 */
+
+  /* ━━ 4. 品牌主色/辅助色 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+  --qh-accent:        #0F172A;    /* 主品牌色(深蓝) */
+  --qh-accent-soft:   #1E293B;    /* 主品牌浅色 */
+  --qh-accent-strong: #020617;    /* 主品牌深色 */
+  --qh-green:         #10B981;    /* 收银绿(品牌辅色) */
+  --qh-green-light:   #34D399;    /* 收银绿浅 */
+  --qh-green-strong:  #059669;    /* 收银绿深 */
+
+  /* ━━ 5. 语义色 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+  --qh-success:       #059669;
+  --qh-success-bg:    #ECFDF5;
+  --qh-success-text:  #065F46;
+  --qh-warning:       #F59E0B;
+  --qh-warning-bg:    #FFFBEB;
+  --qh-warning-text:  #92400E;
+  --qh-danger:        #DC2626;
+  --qh-danger-bg:     #FEF2F2;
+  --qh-danger-text:   #991B1B;
+  --qh-info:          #0EA5E9;
+  --qh-info-bg:       #EFF6FF;
+  --qh-info-text:     #0C4A6E;
+
+  /* ━━ 6. 行业扩展色 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+  --qh-industry-fast-food:    #F59E0B;    /* 快餐 */
+  --qh-industry-full-service: #EF4444;    /* 正餐 */
+  --qh-industry-beverage:     #06B6D4;    /* 茶饮 */
+  --qh-industry-hotpot:       #F97316;    /* 火锅 */
+  --qh-industry-bakery:       #D946EF;    /* 烘焙 */
+  --qh-industry-retail:       #10B981;    /* 零售 */
+
+  /* ━━ 7. 订单状态色 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+  --qh-order-pending:     #94A3B8;    /* 待支付 */
+  --qh-order-paid:        #0EA5E9;    /* 已支付 */
+  --qh-order-making:      #F59E0B;    /* 制作中 */
+  --qh-order-ready:       #10B981;    /* 待取 */
+  --qh-order-served:      #6366F1;    /* 已上餐 */
+  --qh-order-completed:   #22C55E;    /* 已完成 */
+  --qh-order-voided:      #EF4444;    /* 作废 */
+  --qh-order-refunded:    #F97316;    /* 已退款 */
+
+  /* ━━ 8. 玻璃拟态 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+  --qh-glass-bg:          rgba(255, 255, 255, 0.72);
+  --qh-glass-bg-hover:    rgba(255, 255, 255, 0.85);
+  --qh-glass-border:      rgba(255, 255, 255, 0.22);
+  --qh-glass-blur:        12px;
+  --qh-glass-overlay:     rgba(0, 0, 0, 0.5);
+
+  /* ━━ 9. 间距 8pt 网格 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+  --qh-space-1:   4px;
+  --qh-space-2:   8px;
+  --qh-space-3:   12px;
+  --qh-space-4:   16px;
+  --qh-space-5:   20px;
+  --qh-space-6:   24px;
+  --qh-space-7:   32px;
+  --qh-space-8:   48px;
+  --qh-space-9:   64px;
+  --qh-space-10:  80px;
+
+  /* ━━ 10. 圆角 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+  --qh-radius-sm:     6px;
+  --qh-radius-md:     10px;
+  --qh-radius-lg:     14px;
+  --qh-radius-xl:     20px;
+  --qh-radius-2xl:    28px;
+  --qh-radius-full:   9999px;
+
+  /* ━━ 11. 阴影 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+  --qh-shadow-sm:     0 1px 2px  rgba(15, 23, 42, 0.06);
+  --qh-shadow-md:     0 4px 12px rgba(15, 23, 42, 0.08);
+  --qh-shadow-lg:     0 10px 30px rgba(15, 23, 42, 0.10);
+  --qh-shadow-xl:     0 24px 60px rgba(15, 23, 42, 0.14);
+  --qh-shadow-glow:   0 0 24px  rgba(16, 185, 129, 0.18);
+
+  /* ━━ 12. 字体 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+  --qh-font-sans:  -apple-system, "PingFang SC", "Microsoft YaHei", "Segoe UI", Roboto, sans-serif;
+  --qh-font-mono: "SF Mono", "Consolas", "Monaco", "Courier New", monospace;
+  --qh-font-num:  "SF Pro Display", "DIN Alternate", "PingFang SC", monospace;
+  --qh-font-xs:   12px;
+  --qh-font-sm:   13px;
+  --qh-font-base: 14px;
+  --qh-font-md:   16px;
+  --qh-font-lg:   18px;
+  --qh-font-xl:   22px;
+  --qh-font-2xl:  28px;
+  --qh-font-3xl:  36px;
+
+  /* ━━ 13. 图表调色板 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+  --qh-chart-1: #0F172A;    /* slate-900 营收 */
+  --qh-chart-2: #10B981;    /* emerald 客流 */
+  --qh-chart-3: #F59E0B;    /* amber 单量 */
+  --qh-chart-4: #0EA5E9;    /* sky 客单价 */
+  --qh-chart-5: #8B5CF6;    /* violet 退单率 */
+  --qh-chart-6: #EF4444;    /* red 外卖占比 */
+  --qh-chart-7: #6366F1;    /* indigo 会员消费 */
+
+  /* ━━ 14. 缓动 + 时长 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+  --ease-standard:    cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-out:         cubic-bezier(0, 0, 0.2, 1);
+  --ease-in:          cubic-bezier(0.4, 0, 1, 1);
+  --ease-emphasized:  cubic-bezier(0.2, 0, 0, 1);
+  --ease-spring:      cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-snap:        cubic-bezier(0.4, 0, 0.6, 1);
+  --dur-fast:     120ms;
+  --dur-normal:   200ms;
+  --dur-slow:     350ms;
+  --dur-slower:   600ms;
+  --stagger-step: 60ms;
+}
+/* ━━ 向后兼容 (--c-* --sp-* --r-* --shadow-* --font) ━━━━━━━━━━━━━━━━━ */
+:root {
+  --c-primary: var(--qh-accent);
+  --c-primary-light: var(--qh-accent-soft);
+  --c-primary-dark: var(--qh-accent-strong);
+  --c-green: var(--qh-green);
+  --c-green-light: var(--qh-green-light);
+  --c-green-dark: var(--qh-green-strong);
+  --c-green-bg: var(--qh-success-bg);
+  --c-green-text: var(--qh-success-text);
+  --c-amber: var(--qh-warning);
+  --c-amber-bg: var(--qh-warning-bg);
+  --c-amber-text: var(--qh-warning-text);
+  --c-red: var(--qh-danger);
+  --c-red-bg: var(--qh-danger-bg);
+  --c-red-text: var(--qh-danger-text);
+  --c-blue: var(--qh-info);
+  --c-blue-bg: var(--qh-info-bg);
+  --c-blue-text: var(--qh-info-text);
+  --c-bg: var(--qh-bg);
+  --c-bg-card: var(--qh-surface);
+  --c-bg-hover: var(--qh-surface-hover);
+  --c-border: var(--qh-line);
+  --c-border-light: var(--qh-line-soft);
+  --c-text: var(--qh-ink);
+  --c-text-secondary: var(--qh-ink-soft);
+  --c-text-muted: var(--qh-ink-mute);
+  --sp-1: var(--qh-space-1);  --sp-2: var(--qh-space-2);
+  --sp-3: var(--qh-space-3);  --sp-4: var(--qh-space-4);
+  --sp-5: var(--qh-space-5);  --sp-6: var(--qh-space-6);
+  --sp-8: var(--qh-space-7);  --sp-10: var(--qh-space-9);
+  --r-sm: var(--qh-radius-sm);
+  --r-md: var(--qh-radius-md);
+  --r-lg: var(--qh-radius-lg);
+  --r-xl: var(--qh-radius-xl);
+  --shadow-sm: var(--qh-shadow-sm);
+  --shadow-md: var(--qh-shadow-md);
+  --shadow-lg: var(--qh-shadow-lg);
+  --shadow-xl: var(--qh-shadow-xl);
+  --shadow-glow: var(--qh-shadow-glow);
+  --font: var(--qh-font-sans);
+  --color-industry-fast-food: var(--qh-industry-fast-food);
+  --color-industry-full-service: var(--qh-industry-full-service);
+  --color-industry-beverage: var(--qh-industry-beverage);
+  --color-industry-hotpot: var(--qh-industry-hotpot);
+  --color-industry-bakery: var(--qh-industry-bakery);
+  --color-industry-retail: var(--qh-industry-retail);
+  --color-order-pending: var(--qh-order-pending);
+  --color-order-paid: var(--qh-order-paid);
+  --color-order-making: var(--qh-order-making);
+  --color-order-ready: var(--qh-order-ready);
+  --color-order-served: var(--qh-order-served);
+  --color-order-completed: var(--qh-order-completed);
+  --color-order-voided: var(--qh-order-voided);
+  --color-order-refunded: var(--qh-order-refunded);
+  --chart-cyan: var(--qh-chart-4);
+  --chart-purple: var(--qh-chart-5);
+  --chart-pink: #EC4899;
+  --chart-emerald: var(--qh-chart-2);
+  --glass-bg: var(--qh-glass-bg);
+  --glass-bg-hover: var(--qh-glass-bg-hover);
+  --glass-border: var(--qh-glass-border);
+  --glass-blur-md: var(--qh-glass-blur);
+  --glass-overlay: var(--qh-glass-overlay);
+  --glass-bg-white: var(--qh-surface);
+  --glass-success: var(--qh-success-bg);
+  --glass-danger: var(--qh-danger-bg);
+  --glass-warning: var(--qh-warning-bg);
+  --glass-info: var(--qh-info-bg);
+  --spacing-1: var(--qh-space-1);
+  --spacing-2: var(--qh-space-2);
+  --spacing-3: var(--qh-space-3);
+  --spacing-4: var(--qh-space-4);
+  --spacing-5: var(--qh-space-5);
+  --spacing-6: var(--qh-space-6);
+  --spacing-7: var(--qh-space-7);
+  --spacing-8: var(--qh-space-8);
+  --spacing-9: var(--qh-space-9);
+  --radius-sm: var(--qh-radius-sm);
+  --radius-md: var(--qh-radius-md);
+  --radius-lg: var(--qh-radius-lg);
+  --radius-xl: var(--qh-radius-xl);
+  --radius-2xl: var(--qh-radius-2xl);
+  --font-size-xs: var(--qh-font-xs);
+  --font-size-sm: var(--qh-font-sm);
+  --font-size-base: var(--qh-font-base);
+  --font-size-md: var(--qh-font-md);
+  --font-size-lg: var(--qh-font-lg);
+  --font-size-xl: var(--qh-font-xl);
+  --font-size-2xl: var(--qh-font-2xl);
+  --text-primary: var(--qh-ink);
+  --text-secondary: var(--qh-ink-soft);
+  --text-muted: var(--qh-ink-mute);
+  --text-accent: var(--qh-info);
+  --border-default: var(--qh-line);
+  --border-accent: var(--qh-info);
+  --color-success: var(--qh-success);
+  --color-warning: var(--qh-warning);
+  --color-danger: var(--qh-danger);
+  --color-info: var(--qh-info);
+}
+/* ━━ 向后 compat: brand.css 原始命名 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+:root {
+  --qh-ff: var(--qh-font-sans);
+  --qh-ff-num: var(--qh-font-num);
+  --qh-fs-display: var(--qh-font-3xl);
+  --qh-fs-h1: var(--qh-font-xl);
+  --qh-fs-h2: var(--qh-font-lg);
+  --qh-fs-h3: var(--qh-font-md);
+  --qh-fs-body: var(--qh-font-base);
+  --qh-fs-caption: var(--qh-font-xs);
+  --qh-shadow-1: var(--qh-shadow-sm);
+  --qh-shadow-2: var(--qh-shadow-md);
+  --qh-shadow-3: var(--qh-shadow-lg);
+  --qh-shadow-4: var(--qh-shadow-xl);
+  --qh-r-xs: 4px;
+  --qh-r-sm: var(--qh-radius-sm);
+  --qh-r-md: var(--qh-radius-md);
+  --qh-r-lg: var(--qh-radius-lg);
+  --qh-r-xl: var(--qh-radius-xl);
+  --qh-g1: var(--qh-space-1);
+  --qh-g2: var(--qh-space-2);
+  --qh-g3: var(--qh-space-3);
+  --qh-g4: var(--qh-space-4);
+  --qh-g5: var(--qh-space-5);
+  --qh-g6: var(--qh-space-6);
+  --qh-g8: var(--qh-space-7);
+  --qh-g12: var(--qh-space-8);
+  --qh-ease-standard: var(--ease-standard);
+  --qh-ease-ease-out: var(--ease-out);
+  --qh-ease-spring: var(--ease-spring);
+  --qh-dur-fast: var(--dur-fast);
+  --qh-dur-sm: var(--dur-normal);
+  --qh-dur-md: var(--dur-slow);
+  --qh-highlight: var(--qh-warning);
+  --qh-highlight-bg: var(--qh-warning-bg);
+  --qh-surface-line: var(--qh-line);
+  --qh-primary: var(--qh-info);
+}
+
+/* ━━ motion + z-index (保留 motion.css 原始命名) ━━━━━━━━━━━━━━━━━━━ */
+:root {
+  --motion-dur-instant: 100ms;
+  --motion-dur-fast: var(--dur-fast);
+  --motion-dur-normal: var(--dur-normal);
+  --motion-dur-slow: var(--dur-slow);
+  --motion-dur-slowest: var(--dur-slower);
+  --motion-ease-standard: var(--ease-standard);
+  --motion-ease-out: var(--ease-out);
+  --motion-ease-in: var(--ease-in);
+  --motion-ease-emphasized: var(--ease-emphasized);
+  --motion-ease-spring: var(--ease-spring);
+  --motion-ease-snap: var(--ease-snap);
+  --motion-stagger: var(--stagger-step);
+  --motion-stagger-spring: 80ms;
+  --z-base: 0;
+  --z-sticky: 50;
+  --z-overlay: 100;
+  --z-drawer: 200;
+  --z-modal: 300;
+  --z-toast: 400;
+  --z-splash: 500;
+}
+
+/* ━━ Dark 主题 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+body.theme-dark,
+body.theme-extend-dark {
+  --qh-ink: #F1F5F9;
+  --qh-ink-soft: #CBD5E1;
+  --qh-ink-mute: #64748B;
+  --qh-bg: #0F172A;
+  --qh-surface: #1E293B;
+  --qh-surface-alt: #1E293B;
+  --qh-surface-hover: #334155;
+  --qh-line: #334155;
+  --qh-glass-bg: rgba(255, 255, 255, 0.05);
+  --qh-glass-bg-hover: rgba(255, 255, 255, 0.10);
+  --qh-glass-border: rgba(255, 255, 255, 0.10);
+  --qh-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.30);
+  --qh-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.35);
+  --qh-shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.40);
+  --qh-shadow-xl: 0 24px 60px rgba(0, 0, 0, 0.50);
+}

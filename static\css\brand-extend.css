@@ -1,0 +1,252 @@
+/* ==========================================================================
+   柒号收银系统 — 品牌设计令牌扩展 v1.0
+   ----------------------------------------------------------------------
+   · 命名空间: --color-* / --chart-* / --glass-* / --spacing-* / --radius-*
+     / --shadow-* / --font-size-* / --bg-* / --text-*
+   · 与现有系统关系:
+     - --qh-*   (brand.css)  → 语义化主系统，本页不覆盖
+     - --c-*    (app.css)    → 旧组件层，本页不覆盖
+     - 本页追加「收银场景专属」延伸令牌，仅供组件/模块级调用
+   · 对比度 (WCAG AA on #0F172A 暗底):
+     - 品类色 / 状态色 / Chart 色均 ≥ 4.5:1 on #0F172A
+     - 中性文字 ≥ 7:1
+   ========================================================================== */
+
+:root {
+  /* ========================================================================
+     1. 行业品类色板 — 6 大业态，用于店招 / 报表 / 标签 / 看板
+        · 饱和度中等偏高 (POS 收银台为暗底场景，低饱和看不清)
+        · 每色附浅底变量用于卡片 / 徽标背景
+     ======================================================================== */
+
+  /* 快餐 — 琥珀 */
+  --color-industry-fast-food:         #F59E0B;
+  --color-industry-fast-food-bg:      #FFFBEB;
+  --color-industry-fast-food-text:    #92400E;
+
+  /* 正餐 — 朱红 */
+  --color-industry-full-service:      #EF4444;
+  --color-industry-full-service-bg:   #FEF2F2;
+  --color-industry-full-service-text: #991B1B;
+
+  /* 茶饮 — 青蓝 */
+  --color-industry-beverage:          #06B6D4;
+  --color-industry-beverage-bg:       #ECFEFF;
+  --color-industry-beverage-text:     #155E75;
+
+  /* 火锅 — 橙 */
+  --color-industry-hotpot:            #F97316;
+  --color-industry-hotpot-bg:         #FFF7ED;
+  --color-industry-hotpot-text:       #9A3412;
+
+  /* 烘焙 — 紫红 */
+  --color-industry-bakery:            #D946EF;
+  --color-industry-bakery-bg:         #FAF5FF;
+  --color-industry-bakery-text:       #86198F;
+
+  /* 零售 — 翠绿 */
+  --color-industry-retail:            #10B981;
+  --color-industry-retail-bg:         #ECFDF5;
+  --color-industry-retail-text:       #065F46;
+
+  /* ========================================================================
+     2. 订单状态色 — 7 态闭环 (pending → served / voided → refunded)
+        · 与「品类色」语义隔离，禁止交叉引用
+        · 每色附 bg / text 子变量推动 chip / 徽标 / 行状态
+     ======================================================================== */
+
+  /* 待支付 */
+  --color-order-pending:       #94A3B8;
+  --color-order-pending-bg:    #F1F5F9;
+  --color-order-pending-text:  #334155;
+
+  /* 已支付 */
+  --color-order-paid:          #0EA5E9;
+  --color-order-paid-bg:       #EFF6FF;
+  --color-order-paid-text:     #0C4A6E;
+
+  /* 制作中 */
+  --color-order-making:        #F59E0B;
+  --color-order-making-bg:     #FFFBEB;
+  --color-order-making-text:   #92400E;
+
+  /* 待取 / 备餐完成 */
+  --color-order-ready:         #10B981;
+  --color-order-ready-bg:      #ECFDF5;
+  --color-order-ready-text:    #065F46;
+
+  /* 已上餐 / 交付 */
+  --color-order-served:        #6366F1;
+  --color-order-served-bg:     #EEF2FF;
+  --color-order-served-text:   #3730A3;
+
+  /* 已完成 */
+  --color-order-completed:     #22C55E;
+  --color-order-completed-bg:  #DCFCE7;
+  --color-order-completed-text:#166534;
+
+  /* 作废 */
+  --color-order-voided:        #EF4444;
+  --color-order-voided-bg:     #FEF2F2;
+  --color-order-voided-text:   #991B1B;
+
+  /* 已退款 */
+  --color-order-refunded:      #F97316;
+  --color-order-refunded-bg:   #FFF7ED;
+  --color-order-refunded-text: #9A3412;
+
+  /* ========================================================================
+     3. 数据可视化色板 — 7 色序列，Chart.js / ECharts 直接消费
+        · 色相均匀分布避免歧义
+        · 不算「状态」也不算「品类」- 纯可视化用途
+     ======================================================================== */
+  --chart-cyan:      #06B6D4;   /* revenue / 客流 */
+  --chart-blue:      #3B82F6;   /* 单量 */
+  --chart-indigo:    #6366F1;   /* 客单价 */
+  --chart-purple:    #8B5CF6;   /* 退单率 */
+  --chart-pink:      #EC4899;   /* 外卖占比 */
+  --chart-amber:     #F59E0B;   /* 时段峰值 */
+  --chart-emerald:   #10B981;   /* 会员消费 */
+
+  /* ========================================================================
+     4. 玻璃拟态增强 — 在 ui-upgrade.css 基础上再细化 4 级
+        · --glass-* 为原始变量；组件层可直接引用
+     ======================================================================== */
+  /* 背景透明度阶梯 */
+  --glass-bg-weak:      rgba(255, 255, 255, 0.04);
+  --glass-bg:           rgba(255, 255, 255, 0.08);
+  --glass-bg-hover:     rgba(255, 255, 255, 0.14);
+  --glass-bg-strong:    rgba(255, 255, 255, 0.20);
+
+  /* 描边透明度阶梯 */
+  --glass-border:           rgba(255, 255, 255, 0.12);
+  --glass-border-hover:     rgba(255, 255, 255, 0.22);
+  --glass-border-strong:    rgba(255, 255, 255, 0.32);
+  --glass-border-focus:     rgba(14, 165, 233, 0.45);
+
+  /* 模糊半径 */
+  --glass-blur-sm:    8px;
+  --glass-blur-md:    16px;
+  --glass-blur-lg:    24px;
+
+  /* 阴影 (玻璃质感专用的弥散 + 接触两层) */
+  --glass-shadow-sm:    0 4px 16px  rgba(0, 0, 0, 0.10);
+  --glass-shadow-md:    0 8px 32px  rgba(0, 0, 0, 0.12);
+  --glass-shadow-lg:    0 16px 48px rgba(0, 0, 0, 0.18);
+  --glass-shadow-glow:  0 0 24px   rgba(14, 165, 233, 0.25);
+
+  /* 玻璃背叠色 (用于渐变玻璃卡片，如 KPI) */
+  --glass-grad-cyan-indigo: linear-gradient(135deg, rgba(6, 182, 212, 0.15) 0%, rgba(99, 102, 241, 0.15) 100%);
+  --glass-grad-green-emerald: linear-gradient(135deg, rgba(16, 185, 129, 0.18) 0%, rgba(5, 150, 105, 0.10) 100%);
+  --glass-grad-amber-red: linear-gradient(135deg, rgba(245, 158, 11, 0.18) 0%, rgba(239, 68, 68, 0.10) 100%);
+
+  /* ========================================================================
+     5. 字体层级 (clamp 响应式) — 收银台信息密度高，需 6 级落差
+     ======================================================================== */
+  --font-size-xs:   clamp(0.65rem, 1.5vw, 0.75rem);    /* 注释 / 时间戳 */
+  --font-size-sm:   clamp(0.75rem, 1.8vw, 0.875rem);   /* 次级说明 */
+  --font-size-base: clamp(0.875rem, 2vw, 1rem);        /* 正文 / 列表 */
+  --font-size-md:   clamp(1rem, 2.3vw, 1.125rem);      /* 小标题 */
+  --font-size-lg:   clamp(1.125rem, 2.8vw, 1.375rem);  /* 卡片标题 */
+  --font-size-xl:   clamp(1.375rem, 3.5vw, 1.75rem);   /* 区块标题 */
+  --font-size-2xl:  clamp(1.75rem, 4.5vw, 2.25rem);    /* 金额 / 大数字 */
+
+  /* ========================================================================
+     6. 间距梯度 — 8px 基准 (4 / 8 / 12 / 16 / 20 / 24 / 32 / 48 / 64)
+     ======================================================================== */
+  --spacing-0:    0px;
+  --spacing-1:    4px;
+  --spacing-2:    8px;
+  --spacing-3:    12px;
+  --spacing-4:    16px;
+  --spacing-5:    20px;
+  --spacing-6:    24px;
+  --spacing-7:    32px;
+  --spacing-8:    48px;
+  --spacing-9:    64px;
+
+  /* ========================================================================
+     7. 圆角梯度 — 6 级 (sm → full)
+     ======================================================================== */
+  --radius-sm:     6px;     /* Tag / 小徽标 */
+  --radius-md:     10px;    /* 按钮 / 输入框 */
+  --radius-lg:     14px;    /* 卡片 */
+  --radius-xl:     20px;    /* 大卡片 / Modal */
+  --radius-2xl:    28px;    /* Drawer / 特殊容器 */
+  --radius-full:   9999px;  /* 胶囊 */
+
+  /* ========================================================================
+     8. 阴影梯度 — 4 级，与 --qh-shadow-* / --shadow-* 共存但更语义
+     ======================================================================== */
+  --shadow-sm:   0 2px 8px  rgba(0, 0, 0, 0.08);
+  --shadow-md:   0 4px 16px rgba(0, 0, 0, 0.12);
+  --shadow-lg:   0 8px 32px rgba(0, 0, 0, 0.16);
+  --shadow-xl:   0 16px 48px rgba(0, 0, 0, 0.20);
+  --shadow-glow: 0 0 24px  rgba(14, 165, 233, 0.25);
+  --shadow-inner: inset 0 1px 2px rgba(0, 0, 0, 0.06);
+
+  /* ========================================================================
+     9. 背景与文本 (暗色主题)
+     ======================================================================== */
+  --bg-app:           linear-gradient(135deg, #0F172A 0%, #1E293B 50%, #0F172A 100%);
+  --bg-card:          var(--glass-bg);
+  --bg-card-hover:    var(--glass-bg-hover);
+  --bg-elevated:      rgba(30, 41, 59, 0.85);
+
+  --text-primary:     #F8FAFC;   /* slate-50  */
+  --text-secondary:   #CBD5E1;   /* slate-300 */
+  --text-tertiary:    #94A3B8;   /* slate-400 */
+  --text-muted:       #64748B;   /* slate-500 */
+  --text-inverse:     #0F172A;   /* slate-900 */
+  --text-accent:      #0EA5E9;   /* sky-500  */
+
+  /* 链接与交互 */
+  --text-link:        #38BDF8;   /* sky-400 */
+  --text-link-hover:  #7DD3FC;   /* sky-300 */
+
+  /* 通用边框 */
+  --border-default:   rgba(255, 255, 255, 0.10);
+  --border-strong:    rgba(255, 255, 255, 0.22);
+  --border-accent:    rgba(14, 165, 233, 0.40);
+
+  /* ========================================================================
+     10. Z-index 命名层
+     ======================================================================== */
+  --z-base:       0;
+  --z-sticky:     50;
+  --z-overlay:    100;
+  --z-drawer:     200;
+  --z-modal:      300;
+  --z-toast:      400;
+  --z-splash:     500;
+
+  /* ========================================================================
+     11. 动效补充 (与 --qh-ease-* 共存)
+     ======================================================================== */
+  --ease-spring:     cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-smooth:     cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-snap:       cubic-bezier(0, 0, 0.2, 1);
+
+  --dur-fast:        120ms;
+  --dur-base:        200ms;
+  --dur-slow:        350ms;
+  --dur-slower:     600ms;
+}
+
+
+/* ─────────────────────────────────────────────────────────────────────────
+   暗色覆盖 (如需要更极端的暗底)
+   ------------------------------------------------------------------------- */
+body.theme-extend-dark {
+  --glass-bg:           rgba(255, 255, 255, 0.05);
+  --glass-bg-hover:     rgba(255, 255, 255, 0.10);
+  --glass-border:       rgba(255, 255, 255, 0.08);
+  --glass-border-strong:rgba(255, 255, 255, 0.20);
+
+  --text-primary:     #E2E8F0;
+  --text-secondary:   #94A3B8;
+  --text-tertiary:    #64748B;
+  --text-muted:       #475569;
+
+  --bg-elevated:      rgba(15, 23, 42, 0.90);
+}
